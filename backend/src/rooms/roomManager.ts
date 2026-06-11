@@ -8,10 +8,16 @@ export interface Player {
   isHost: boolean;
 }
 
+export interface Spectator {
+  id: string; // Socket ID
+  name: string;
+}
+
 export interface Room {
   code: string;
   hostId: string;
   players: Player[];
+  spectators?: Spectator[];
   status: 'lobby' | 'playing';
   game?: UnoGameState;
 }
@@ -62,7 +68,7 @@ class RoomManager {
     code: string,
     playerName: string,
     playerSocketId: string
-  ): { room: Room; player: Player } {
+  ): { room: Room; player: Player | null; isSpectator: boolean } {
     const upperCode = code.toUpperCase();
     const room = this.rooms.get(upperCode);
 
@@ -110,16 +116,24 @@ class RoomManager {
       }
 
       console.log(`[PLAYER_RECONNECTED] Rebound name "${playerName}" from socket ${oldSocketId} to ${playerSocketId}`);
-      return { room, player: existingPlayerByName };
+      return { room, player: existingPlayerByName, isSpectator: false };
     }
 
-    // Normal join validations
-    if (room.status === 'playing') {
-      throw new Error('Game has already started');
-    }
+    // Spectator Check
+    const shouldSpectate = room.status === 'playing' || room.players.length >= 6;
 
-    if (room.players.length >= 6) {
-      throw new Error('Room is full (max 6 players)');
+    if (shouldSpectate) {
+      if (!room.spectators) {
+        room.spectators = [];
+      }
+      // Reconnection or duplicate checks for spectators
+      let spectator = room.spectators.find((s) => s.id === playerSocketId);
+      if (!spectator) {
+        spectator = { id: playerSocketId, name: playerName };
+        room.spectators.push(spectator);
+      }
+      console.log(`[SPECTATOR_JOINED] Spectator "${playerName}" (${playerSocketId}) joined room ${room.code}`);
+      return { room, player: null, isSpectator: true };
     }
 
     // Stable Seating System: Find the lowest vacant seat number between 1 and 6
@@ -150,12 +164,13 @@ class RoomManager {
     // Sort players by seat number so client lists remain aligned
     room.players.sort((a, b) => a.seatNumber - b.seatNumber);
 
-    return { room, player: newPlayer };
+    return { room, player: newPlayer, isSpectator: false };
   }
 
-  // Remove player from whatever room they are in
-  public leaveRoom(playerSocketId: string): { room: Room | null; leftPlayer: Player } | null {
+  // Remove player/spectator from whatever room they are in
+  public leaveRoom(playerSocketId: string): { room: Room | null; leftPlayer: Player | null; leftSpectator: Spectator | null } | null {
     for (const [code, room] of this.rooms.entries()) {
+      // Check players list
       const playerIndex = room.players.findIndex((p) => p.id === playerSocketId);
       
       if (playerIndex !== -1) {
@@ -168,15 +183,30 @@ class RoomManager {
         }
 
         // If room is empty, delete it
-        if (room.players.length === 0) {
+        if (room.players.length === 0 && (!room.spectators || room.spectators.length === 0)) {
           this.rooms.delete(code);
-          return { room: null, leftPlayer };
+          return { room: null, leftPlayer, leftSpectator: null };
         }
 
         // Keep players sorted by seat number
         room.players.sort((a, b) => a.seatNumber - b.seatNumber);
 
-        return { room, leftPlayer };
+        return { room, leftPlayer, leftSpectator: null };
+      }
+
+      // Check spectators list
+      if (room.spectators) {
+        const specIndex = room.spectators.findIndex((s) => s.id === playerSocketId);
+        if (specIndex !== -1) {
+          const [leftSpectator] = room.spectators.splice(specIndex, 1);
+          
+          if (room.players.length === 0 && room.spectators.length === 0) {
+            this.rooms.delete(code);
+            return { room: null, leftPlayer: null, leftSpectator };
+          }
+          
+          return { room, leftPlayer: null, leftSpectator };
+        }
       }
     }
     return null;

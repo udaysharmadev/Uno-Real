@@ -101,20 +101,15 @@ app.post('/api/rooms/join', (req, res) => {
   // If player is reconnecting with same name, allow it
   const isReconnecting = room.players.some(p => p.name.toLowerCase() === name.toLowerCase());
   
+  let isSpectator = false;
   if (!isReconnecting) {
-    if (room.status === 'playing') {
-      res.status(400).json({ error: 'Game has already started in this room' });
-      return;
-    }
-
-    if (room.players.length >= 6) {
-      res.status(400).json({ error: 'Room is full (max 6 players)' });
-      return;
+    if (room.status === 'playing' || room.players.length >= 6) {
+      isSpectator = true;
     }
   }
 
-  console.log(`[REST] Validated join request for name "${name}" to room ${code}`);
-  res.status(200).json({ success: true });
+  console.log(`[REST] Validated join request for name "${name}" to room ${code} (isSpectator: ${isSpectator})`);
+  res.status(200).json({ success: true, isSpectator });
 });
 
 // --- Socket.IO Server Setup ---
@@ -137,7 +132,7 @@ io.on('connection', (socket) => {
   socket.on('create-room', ({ name }: { name: string }) => {
     try {
       const room = roomManager.createRoom();
-      const { player } = roomManager.joinRoom(room.code, name, socket.id);
+      const { player, isSpectator } = roomManager.joinRoom(room.code, name, socket.id);
       
       currentRoomCode = room.code;
       currentName = name;
@@ -146,7 +141,7 @@ io.on('connection', (socket) => {
       console.log(`[Socket] Host ${name} (${socket.id}) created and joined room ${room.code}`);
       
       socket.emit('lobby-updated', room);
-      socket.emit('joined-successfully', { room, player });
+      socket.emit('joined-successfully', { room, player, isSpectator });
     } catch (error: any) {
       socket.emit('error', { message: error.message || 'Failed to create room via socket' });
     }
@@ -156,19 +151,28 @@ io.on('connection', (socket) => {
   socket.on('join-room', ({ code, name }: { code: string; name: string }) => {
     try {
       const upperCode = code.toUpperCase();
-      const { room, player } = roomManager.joinRoom(upperCode, name, socket.id);
+      const { room, player, isSpectator } = roomManager.joinRoom(upperCode, name, socket.id);
 
       currentRoomCode = upperCode;
       currentName = name;
       socket.join(upperCode);
 
-      console.log(`[Socket] Player ${name} (${socket.id}) joined room ${upperCode} at Seat ${player.seatNumber}`);
+      if (isSpectator) {
+        console.log(`[Socket] Spectator ${name} (${socket.id}) joined room ${upperCode}`);
+      } else {
+        console.log(`[Socket] Player ${name} (${socket.id}) joined room ${upperCode} at Seat ${player?.seatNumber}`);
+      }
 
       // Notify the specific socket they joined successfully
-      socket.emit('joined-successfully', { room, player });
+      socket.emit('joined-successfully', { room, player, isSpectator });
 
-      // Notify others in the room
-      socket.to(upperCode).emit('player-joined', player);
+      if (isSpectator) {
+        // Notify others that a spectator joined
+        socket.to(upperCode).emit('spectator-joined', { name, id: socket.id });
+      } else {
+        // Notify others that a player joined
+        socket.to(upperCode).emit('player-joined', player);
+      }
 
       // Broadcast the updated lobby state to all players in the room
       io.to(upperCode).emit('lobby-updated', room);
@@ -181,6 +185,22 @@ io.on('connection', (socket) => {
       console.error(`[Socket] Join error for client ${socket.id}:`, error.message);
       socket.emit('error', { message: error.message || 'Failed to join room' });
     }
+  });
+
+  // Send reaction socket handler
+  socket.on('send-reaction', ({ emoji }: { emoji: string }) => {
+    if (!currentRoomCode) return;
+    const room = roomManager.getRoom(currentRoomCode);
+    if (!room) return;
+
+    const player = room.players.find(p => p.id === socket.id);
+    const spectator = room.spectators?.find(s => s.id === socket.id);
+    const name = player ? player.name : (spectator ? spectator.name : 'Unknown');
+    const seatNumber = player ? player.seatNumber : null;
+    const isSpectator = !player;
+
+    console.log(`[REACTION] ${name} sent emoji ${emoji} in room ${currentRoomCode}`);
+    io.to(currentRoomCode).emit('player-reacted', { name, seatNumber, emoji, isSpectator });
   });
 
   // Trigger game start (host only)
@@ -333,17 +353,25 @@ io.on('connection', (socket) => {
 
     const room = roomManager.getRoom(currentRoomCode);
     if (room && room.status === 'playing' && isDisconnect) {
-      // Game is active, do not vacate the player seat to allow reconnection
-      console.log(`[PLAYER_DISCONNECTED] Retaining seat for ${currentName} (${socket.id}) in active game.`);
-      return;
+      const player = room.players.find(p => p.id === socket.id);
+      if (player) {
+        // Game is active, do not vacate the player seat to allow reconnection
+        console.log(`[PLAYER_DISCONNECTED] Retaining seat for ${currentName} (${socket.id}) in active game.`);
+        return;
+      }
     }
 
     const result = roomManager.leaveRoom(socket.id);
     if (result) {
-      const { room: updatedRoom, leftPlayer } = result;
-      console.log(`[Socket] Player ${leftPlayer.name} left room ${currentRoomCode}`);
+      const { room: updatedRoom, leftPlayer, leftSpectator } = result;
+      if (leftPlayer) {
+        console.log(`[Socket] Player ${leftPlayer.name} left room ${currentRoomCode}`);
+        socket.to(currentRoomCode).emit('player-left', leftPlayer);
+      } else if (leftSpectator) {
+        console.log(`[Socket] Spectator ${leftSpectator.name} left room ${currentRoomCode}`);
+        socket.to(currentRoomCode).emit('spectator-left', leftSpectator);
+      }
       
-      socket.to(currentRoomCode).emit('player-left', leftPlayer);
       socket.leave(currentRoomCode);
 
       if (updatedRoom) {

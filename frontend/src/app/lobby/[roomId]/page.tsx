@@ -1,21 +1,19 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useSocket } from '../../../hooks/useSocket';
 import { useGameStore } from '../../../store/useGameStore';
 import { PlayerHand } from '../../../components/cards/PlayerHand';
-import { triggerDealerSequence } from '../../../lib/cards/cardAnimations';
+import { ReactionsHandler } from '../../../components/social/ReactionsHandler';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Copy, 
   Check, 
   LogOut, 
-  Play, 
   ShieldAlert, 
   Loader2, 
-  Sparkles,
   ArrowUpCircle,
   Layers
 } from 'lucide-react';
@@ -36,6 +34,80 @@ const TableScene = dynamic(
   }
 );
 
+// High-performance canvas confetti particle effect
+const ConfettiCanvas: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationId: number;
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    const handleResize = () => {
+      if (canvas) {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      }
+    };
+    window.addEventListener('resize', handleResize);
+
+    const colors = ['#ef4444', '#3b82f6', '#10b981', '#eab308', '#a855f7', '#ff7849'];
+    const particles = Array.from({ length: 140 }).map(() => ({
+      x: Math.random() * width,
+      y: Math.random() * height - height,
+      r: Math.random() * 6 + 4,
+      d: Math.random() * height,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      tilt: Math.random() * 10 - 5,
+      tiltAngleIncremental: Math.random() * 0.07 + 0.02,
+      tiltAngle: 0,
+    }));
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      particles.forEach((p, idx) => {
+        p.tiltAngle += p.tiltAngleIncremental;
+        p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
+        p.x += Math.sin(p.tiltAngle);
+        p.tilt = Math.sin(p.tiltAngle - idx / 3) * 15;
+
+        ctx.beginPath();
+        ctx.lineWidth = p.r;
+        ctx.strokeStyle = p.color;
+        ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+        ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+        ctx.stroke();
+
+        if (p.y > height) {
+          particles[idx] = {
+            ...p,
+            x: Math.random() * width,
+            y: -20,
+            tilt: Math.random() * 10 - 5,
+          };
+        }
+      });
+
+      animationId = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-10 w-full h-full" />;
+};
+
 export default function LobbyPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -50,7 +122,6 @@ export default function LobbyPage() {
     leaveRoom, 
     startGame, 
     playCard, 
-    drawCard, 
     chooseColor, 
     callUno 
   } = useSocket();
@@ -76,7 +147,8 @@ export default function LobbyPage() {
     setSelectedCardId,
     clearAllCards,
     isProcessing,
-    setIsProcessing
+    setIsProcessing,
+    isSpectator
   } = useGameStore();
   
   const [copied, setCopied] = useState(false);
@@ -118,7 +190,7 @@ export default function LobbyPage() {
 
   // Play Selected Card Animation Flow (flies card from hand to discard stack)
   const handlePlayCard = () => {
-    if (!selectedCardId || !selectedOldCard || isProcessing) return;
+    if (!selectedCardId || !selectedOldCard || isProcessing || isSpectator) return;
 
     // Check validity locally before starting the animation
     const topDiscard = discardPile[discardPile.length - 1];
@@ -174,7 +246,7 @@ export default function LobbyPage() {
   const isMyTurn = currentPlayerId === player?.id && gameStatus === 'playing';
 
   // Render connection/error loading states
-  if (!room || !player) {
+  if (!room || (!player && !isSpectator)) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-4 min-h-screen bg-slate-950">
         <div className="text-center max-w-sm flex flex-col items-center gap-4">
@@ -211,6 +283,9 @@ export default function LobbyPage() {
   return (
     <div className="w-screen h-screen flex flex-col bg-slate-950 text-slate-100 select-none overflow-hidden relative">
       
+      {/* Reactions Layer Overlay */}
+      <ReactionsHandler />
+
       {/* =================================================================== */}
       {/* TOP 70% - Virtual Card Table Viewport                               */}
       {/* =================================================================== */}
@@ -225,8 +300,10 @@ export default function LobbyPage() {
         <header className="absolute top-0 left-0 right-0 p-3.5 flex justify-between items-center z-20 pointer-events-none">
           {/* Branding & Status Info */}
           <div className="glass-panel rounded-lg px-3 py-1 flex items-center gap-1.5 pointer-events-auto shadow-md opacity-90">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-            <span className="text-[10px] font-bold text-white tracking-wide">UNO Real</span>
+            <span className={`w-1.5 h-1.5 rounded-full animate-pulse shadow-lg ${isSpectator ? 'bg-amber-500 shadow-amber-500/60' : 'bg-green-500 shadow-green-500/60'}`} />
+            <span className="text-[10px] font-bold text-white tracking-wide">
+              {isSpectator ? '⚡ Spectating' : '🏆 UNO Real'}
+            </span>
           </div>
 
           {/* Turn Direction HUD Widget */}
@@ -289,7 +366,7 @@ export default function LobbyPage() {
                 className="flex flex-col items-center gap-1.5"
               >
                 <button
-                  disabled={!isMyTurn || isProcessing}
+                  disabled={!isMyTurn || isProcessing || isSpectator}
                   onClick={handlePlayCard}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 disabled:opacity-50 text-white font-bold py-2.5 px-6 rounded-full shadow-[0_0_24px_rgba(59,130,246,0.6)] transition-all flex items-center gap-2 text-xs uppercase tracking-wider border border-blue-400/30 animate-pulse"
                 >
@@ -303,7 +380,7 @@ export default function LobbyPage() {
                   isHost ? (
                     <div className="flex flex-col items-center gap-1.5">
                       <button
-                        disabled={!canStart || isProcessing}
+                        disabled={!canStart || isProcessing || isSpectator}
                         onClick={() => {
                           setIsProcessing(true);
                           startGame();
@@ -356,31 +433,39 @@ export default function LobbyPage() {
         <div className="flex items-center gap-2 text-[10px] uppercase font-black tracking-widest text-slate-400 w-full justify-center relative">
           <div className="flex items-center gap-2">
             <Layers size={13} className="text-slate-500" />
-            <span>Your Hand ({myHand.length} Cards)</span>
+            <span>{isSpectator ? 'Spectating Panel' : `Your Hand (${myHand.length} Cards)`}</span>
           </div>
 
-          {/* Declare UNO button */}
-          {(myHand.length === 2 || myHand.length === 1) && gameStatus === 'playing' && (
-            <button
+          {/* Declare UNO button with tap feedback and glows */}
+          {(myHand.length === 2 || myHand.length === 1) && gameStatus === 'playing' && !isSpectator && (
+            <motion.button
               disabled={isProcessing}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92, y: 2 }}
               onClick={() => {
                 setIsProcessing(true);
                 callUno();
               }}
-              className={`absolute right-4 px-3.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all duration-300 border ${
+              className={`absolute right-4 px-3.5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all duration-300 border ${
                 player && unoCalled[player.id]
-                  ? 'bg-red-600 border-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.5)] animate-pulse'
-                  : 'bg-slate-900 border-slate-700 hover:border-red-500 hover:text-red-400 text-slate-300 animate-bounce'
+                  ? 'bg-gradient-to-r from-red-600 to-amber-600 border-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.75)] animate-pulse'
+                  : 'bg-slate-900 border-slate-700 hover:border-red-500 hover:text-red-400 text-slate-300 shadow-md shadow-red-500/10'
               }`}
             >
               {player && unoCalled[player.id] ? '🔴 UNO Declared!' : '📣 Declare UNO!'}
-            </button>
+            </motion.button>
           )}
         </div>
 
         {/* Hand Area Visual Layout Fan */}
         <div className="flex-1 w-full max-w-3xl flex items-center justify-center gap-4 mt-1">
-          {myHand.length > 0 ? (
+          {isSpectator ? (
+            <div className="w-full h-[150px] rounded-2xl border border-dashed border-slate-800/60 bg-slate-950/40 flex flex-col items-center justify-center p-4">
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                Spectating match in progress...
+              </span>
+            </div>
+          ) : myHand.length > 0 ? (
             <PlayerHand />
           ) : (
             // Dash outline when hand is empty (or lobby)
@@ -394,10 +479,10 @@ export default function LobbyPage() {
 
         {/* Bottom footer text */}
         <div className="text-[8px] text-slate-600 uppercase tracking-widest font-semibold mt-1.5 flex items-center gap-3">
-          <span>UNO Real Game Engine v4.0</span>
+          <span>UNO Real Game Engine v5.0</span>
           <span>•</span>
           <span>Click cards to select</span>
-          {isMyTurn && (
+          {isMyTurn && !isSpectator && (
             <>
               <span>•</span>
               <span className="text-emerald-400 font-bold uppercase animate-pulse">Your Turn</span>
@@ -409,7 +494,7 @@ export default function LobbyPage() {
       {/* =================================================================== */}
       {/* OVERLAYS: Color Selection Wheel Dialog                              */}
       {/* =================================================================== */}
-      {gameStatus === 'awaiting_color_selection' && colorChooserId === player.id && (
+      {gameStatus === 'awaiting_color_selection' && player && colorChooserId === player.id && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 pointer-events-auto">
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col items-center gap-6 shadow-2xl max-w-sm text-center">
             <div>
@@ -463,18 +548,21 @@ export default function LobbyPage() {
       )}
 
       {/* =================================================================== */}
-      {/* OVERLAYS: Game Over Winner Alert                                    */}
+      {/* OVERLAYS: Confetti Canvas Game Over Winner Alert                    */}
       {/* =================================================================== */}
       {gameStatus === 'ended' && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-50 pointer-events-auto">
-          <div className="bg-slate-900 border border-amber-500/30 p-8 rounded-3xl flex flex-col items-center gap-6 shadow-[0_0_50px_rgba(245,158,11,0.25)] max-w-sm text-center">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-50 pointer-events-auto overflow-hidden">
+          {/* Confetti canvas animation */}
+          <ConfettiCanvas />
+
+          <div className="bg-slate-900 border border-amber-500/30 p-8 rounded-3xl flex flex-col items-center gap-6 shadow-[0_0_50px_rgba(245,158,11,0.25)] max-w-sm text-center z-20 relative">
             <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-3xl font-extrabold animate-bounce">
               🏆
             </div>
             <div>
               <h2 className="text-2xl font-black uppercase tracking-widest text-amber-400 animate-pulse">Winner!</h2>
               <p className="text-slate-200 text-lg font-bold mt-2">
-                {winnerName === player.name ? '🎉 YOU WON THE GAME!' : `🎉 ${winnerName} won the game!`}
+                {player && winnerName === player.name ? '🎉 YOU WON THE GAME!' : `🎉 ${winnerName} won the game!`}
               </p>
               <p className="text-slate-400 text-xs mt-1">The UNO match has concluded</p>
             </div>
@@ -494,4 +582,3 @@ export default function LobbyPage() {
     </div>
   );
 }
-

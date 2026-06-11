@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Player } from '../../types/game';
 import { Avatar } from './Avatar';
 import { UserPlus } from 'lucide-react';
+import { useGameStore } from '../../store/useGameStore';
 
 interface PlayerSeatProps {
   seatNumber: number;
@@ -23,6 +25,11 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
   isActiveTurn = false,
 }) => {
   const [hovered, setHovered] = useState(false);
+  const { unoCalled } = useGameStore();
+
+  const hasCalledUno = player ? !!unoCalled[player.id] : false;
+  // UNO Moment triggers when a player has exactly 1 card left and has declared UNO
+  const isUnoMoment = player && cardCount === 1 && hasCalledUno;
 
   // Invite link copy handler on clicking empty seats
   const handleInvite = () => {
@@ -43,7 +50,10 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
   };
 
   return (
-    <div 
+    <motion.div 
+      initial={{ scale: 0.7, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
       className="absolute -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center"
       style={{
         left: coords.left,
@@ -55,12 +65,24 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         className={`relative flex flex-col items-center justify-center transition-all duration-300 select-none cursor-pointer ${
-          hovered ? 'scale-105' : 'scale-100'
+          isUnoMoment ? 'animate-pulse scale-105' : hovered ? 'scale-105' : 'scale-100'
         }`}
       >
+        {/* Pulsing Red Hot Seat Glow for UNO Moment */}
+        {player && isUnoMoment && (
+          <div className="absolute inset-[-8px] rounded-full border-2 border-red-500 animate-ping shadow-[0_0_25px_rgba(239,68,68,0.8)] z-0 pointer-events-none" />
+        )}
+
         {/* Pulsing Active Turn indicator ring */}
-        {player && isActiveTurn && (
+        {player && isActiveTurn && !isUnoMoment && (
           <div className="absolute inset-[-6px] rounded-full border-2 border-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.6)] z-0 pointer-events-none" />
+        )}
+
+        {/* Floating UNO! Badge overlay */}
+        {isUnoMoment && (
+          <div className="absolute -top-6 bg-gradient-to-r from-red-600 to-amber-600 border border-red-400 text-white font-black text-[9px] px-2.5 py-0.5 rounded-full shadow-[0_0_12px_rgba(239,68,68,0.85)] animate-bounce z-20 uppercase tracking-widest leading-none">
+            UNO!
+          </div>
         )}
 
         {player ? (
@@ -76,11 +98,13 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
             
             {/* Username Capsule Tag */}
             <div className={`mt-1.5 px-2.5 py-1 rounded-full border backdrop-blur-md transition-all flex items-center justify-center ${
-              isActiveTurn
-                ? 'bg-emerald-950/85 border-emerald-500/50 text-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                : isLocal
-                  ? 'bg-blue-950/85 border-blue-500/40 text-blue-200 shadow-[0_0_8px_rgba(59,130,246,0.2)]'
-                  : 'bg-slate-900/90 border-slate-800 text-slate-200 shadow-md'
+              isUnoMoment
+                ? 'bg-red-950/85 border-red-500/60 text-red-200 shadow-[0_0_12px_rgba(239,68,68,0.4)]'
+                : isActiveTurn
+                  ? 'bg-emerald-950/85 border-emerald-500/50 text-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                  : isLocal
+                    ? 'bg-blue-950/85 border-blue-500/40 text-blue-200 shadow-[0_0_8px_rgba(59,130,246,0.2)]'
+                    : 'bg-slate-900/90 border-slate-800 text-slate-200 shadow-md'
             }`}>
               <span className="text-[10px] font-bold tracking-wide text-white leading-none truncate max-w-[75px]">
                 {player.name}
@@ -108,8 +132,12 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
                   ))}
                 </div>
                 {/* Count Badge */}
-                <div className="bg-slate-950/90 border border-slate-800/85 px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1.5">
-                  <span className="text-[9px] font-extrabold text-blue-400">
+                <div className={`px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1.5 border backdrop-blur-sm ${
+                  isUnoMoment 
+                    ? 'bg-red-950/90 border-red-500/30' 
+                    : 'bg-slate-950/90 border-slate-800/85'
+                }`}>
+                  <span className={`text-[9px] font-extrabold ${isUnoMoment ? 'text-red-400' : 'text-blue-400'}`}>
                     {cardCount}
                   </span>
                   <span className="text-[7px] font-bold text-slate-400 uppercase tracking-wider">
@@ -139,10 +167,8 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
-
 export default PlayerSeat;
-

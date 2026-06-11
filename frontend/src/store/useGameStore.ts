@@ -28,9 +28,14 @@ interface GameState {
   winnerId: string | null;
   winnerName: string | null;
   unoCalled: Record<string, boolean>; // socketId -> boolean
+  isSpectator: boolean;
+  reactions: Array<{ id: string; name: string; seatNumber: number | null; emoji: string; isSpectator: boolean }>;
   
   setSocket: (socket: Socket | null) => void;
   setIsProcessing: (val: boolean) => void;
+  setIsSpectator: (val: boolean) => void;
+  addReaction: (reaction: { id: string; name: string; seatNumber: number | null; emoji: string; isSpectator: boolean }) => void;
+  removeReaction: (id: string) => void;
   setRoom: (room: Room | null) => void;
   setPlayer: (player: Player | null) => void;
   setError: (error: string | null) => void;
@@ -91,9 +96,14 @@ export const useGameStore = create<GameState>((set) => ({
   winnerId: null,
   winnerName: null,
   unoCalled: {},
+  isSpectator: false,
+  reactions: [],
 
   setSocket: (socket) => set({ socket }),
   setIsProcessing: (isProcessing) => set({ isProcessing }),
+  setIsSpectator: (isSpectator) => set({ isSpectator }),
+  addReaction: (reaction) => set((state) => ({ reactions: [...state.reactions, reaction] })),
+  removeReaction: (id) => set((state) => ({ reactions: state.reactions.filter(r => r.id !== id) })),
   setRoom: (room) => set({ room }),
   setPlayer: (player) => set({ player }),
   setError: (error) => set({ error }),
@@ -135,6 +145,8 @@ export const useGameStore = create<GameState>((set) => ({
     drawPileCount: 52,
     selectedCardId: null,
     isProcessing: false,
+    isSpectator: false,
+    reactions: [],
     currentPlayerId: null,
     currentPlayerSeat: null,
     wildColor: null,
@@ -171,6 +183,8 @@ export const useGameStore = create<GameState>((set) => ({
     drawPileCount: 52,
     selectedCardId: null,
     isProcessing: false,
+    isSpectator: false,
+    reactions: [],
     currentPlayerId: null,
     currentPlayerSeat: null,
     direction: 'clockwise',
