@@ -181,10 +181,10 @@ export default function LobbyPage() {
     room, 
     player, 
     error,
+    setError,
     connectionStatus,
     playerCards,
     discardPile,
-    selectedCardId,
     currentPlayerId,
     currentPlayerSeat,
     direction,
@@ -194,7 +194,6 @@ export default function LobbyPage() {
     winnerId,
     winnerName,
     unoCalled,
-    setSelectedCardId,
     clearAllCards,
     isProcessing,
     setIsProcessing,
@@ -217,6 +216,17 @@ export default function LobbyPage() {
       router.replace('/');
     }
   }, [name, router]);
+
+  // Auto-redirect if room no longer exists
+  useEffect(() => {
+    if (error === 'Room not found' || error === 'This room no longer exists') {
+      const timer = setTimeout(() => {
+        setError(null);
+        router.push('/');
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, router, setError]);
 
   // Connect socket and join room seating list
   useEffect(() => {
@@ -256,23 +266,6 @@ export default function LobbyPage() {
   
   const localSeatNumber = player?.seatNumber || 1;
   const myHand = playerCards[localSeatNumber] || [];
-  const selectedOldCard = myHand.find(c => c.id === selectedCardId);
-
-  // Authoritative Play Card Trigger
-  const handlePlayCard = () => {
-    if (!selectedCardId || !selectedOldCard || isProcessing || isSpectator) return;
-
-    // Check validity locally before sending to server
-    const topDiscard = discardPile[discardPile.length - 1];
-    if (topDiscard && !isValidMove(selectedOldCard, topDiscard, wildColor)) {
-      addToast('Invalid move! Card must match color, value, or be a Wild card.', 'error');
-      return;
-    }
-
-    setIsProcessing(true);
-    playCard(selectedOldCard.id);
-    setSelectedCardId(null);
-  };
 
   const isMyTurn = currentPlayerId === player?.id && gameStatus === 'playing';
 
@@ -316,9 +309,19 @@ export default function LobbyPage() {
             >
               <ShieldAlert className="text-red-500 animate-bounce" size={48} />
               <h2 className="text-xl font-bold text-white">Join Failed</h2>
-              <p className="text-slate-400 text-sm leading-relaxed">{error}</p>
+              <p className="text-slate-400 text-sm leading-relaxed font-medium">
+                {error === 'Room not found' ? 'This room no longer exists' : error}
+              </p>
+              {(error === 'Room not found' || error === 'This room no longer exists') && (
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider animate-pulse">
+                  Redirecting to home page shortly...
+                </p>
+              )}
               <button
-                onClick={() => router.push('/')}
+                onClick={() => {
+                  setError(null);
+                  router.push('/');
+                }}
                 className="w-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all"
               >
                 Return Home
@@ -512,68 +515,50 @@ export default function LobbyPage() {
         {/* HUD: Bottom Table Actions */}
         <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center z-20 pointer-events-none">
           <div className="pointer-events-auto">
-            {selectedOldCard ? (
-              // Card selected: Show glowing Play button (only if it's local player's turn)
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="flex flex-col items-center gap-1.5"
-              >
-                <button
-                  disabled={!isMyTurn || isProcessing || isSpectator}
-                  onClick={handlePlayCard}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 disabled:opacity-50 text-white font-bold py-2.5 px-6 rounded-full shadow-[0_0_24px_rgba(59,130,246,0.6)] transition-all flex items-center gap-2 text-xs uppercase tracking-wider border border-blue-400/30 animate-pulse"
-                >
-                  <ArrowUpCircle size={13} /> {isMyTurn ? `Play ${selectedOldCard.color} ${getCardValueLabel(selectedOldCard.value)}` : 'Wait For Your Turn'}
-                </button>
-              </motion.div>
-            ) : (
-              // Display state alert banners
-              <div className="flex flex-col items-center gap-1.5">
-                {gameStatus === 'lobby' ? (
-                  isHost ? (
-                    <div className="flex flex-col items-center gap-1.5">
-                      <motion.button
-                        whileHover={!canStart || isProcessing || isSpectator ? {} : { scale: 1.05 }}
-                        whileTap={!canStart || isProcessing || isSpectator ? {} : { scale: 0.95 }}
-                        disabled={!canStart || isProcessing || isSpectator}
-                        onClick={() => {
-                          setIsProcessing(true);
-                          startGame();
-                        }}
-                        className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:opacity-40 text-white font-bold py-2.5 px-6 rounded-full shadow-md transition-all flex items-center gap-1.5 text-xs uppercase tracking-wider border border-emerald-400/20 disabled:border-transparent disabled:text-slate-500"
-                      >
-                        Start Game
-                      </motion.button>
-                      {!canStart && (
-                        <span className="text-[8px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-2 py-0.5 rounded-full shadow-md">
-                          Waiting for players to sit ({totalPlayers}/2 minimum)
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3 py-1 rounded-full shadow-md">
-                      Waiting for host to start game...
-                    </span>
-                  )
-                ) : gameStatus === 'playing' ? (
-                  isMyTurn ? (
-                    <span className="text-xs bg-emerald-950/90 border border-emerald-500/40 text-emerald-400 px-4 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.35)] font-black uppercase tracking-widest animate-pulse">
-                      🟢 Your Turn - Select Card or Draw
-                    </span>
-                  ) : (
-                    <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3.5 py-1.5 rounded-full shadow-md">
-                      Waiting for Seat {currentPlayerSeat}'s turn...
-                    </span>
-                  )
-                ) : gameStatus === 'awaiting_color_selection' ? (
-                  <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3.5 py-1.5 rounded-full shadow-md">
-                    Waiting for color selection...
+            {/* Display state alert banners */}
+            <div className="flex flex-col items-center gap-1.5">
+              {gameStatus === 'lobby' ? (
+                isHost ? (
+                  <div className="flex flex-col items-center gap-1.5">
+                    <motion.button
+                      whileHover={!canStart || isProcessing || isSpectator ? {} : { scale: 1.05 }}
+                      whileTap={!canStart || isProcessing || isSpectator ? {} : { scale: 0.95 }}
+                      disabled={!canStart || isProcessing || isSpectator}
+                      onClick={() => {
+                        setIsProcessing(true);
+                        startGame();
+                      }}
+                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:opacity-40 text-white font-bold py-2.5 px-6 rounded-full shadow-md transition-all flex items-center gap-1.5 text-xs uppercase tracking-wider border border-emerald-400/20 disabled:border-transparent disabled:text-slate-500"
+                    >
+                      Start Game
+                    </motion.button>
+                    {!canStart && (
+                      <span className="text-[8px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-2 py-0.5 rounded-full shadow-md">
+                        Waiting for players to sit ({totalPlayers}/2 minimum)
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3 py-1 rounded-full shadow-md">
+                    Waiting for host to start game...
                   </span>
-                ) : null}
-              </div>
-            )}
+                )
+              ) : gameStatus === 'playing' ? (
+                isMyTurn ? (
+                  <span className="text-xs bg-emerald-950/90 border border-emerald-500/40 text-emerald-400 px-4 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.35)] font-black uppercase tracking-widest animate-pulse">
+                    🟢 Your Turn - Play Card or Draw
+                  </span>
+                ) : (
+                  <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3.5 py-1.5 rounded-full shadow-md">
+                    Waiting for Seat {currentPlayerSeat}'s turn...
+                  </span>
+                )
+              ) : gameStatus === 'awaiting_color_selection' ? (
+                <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3.5 py-1.5 rounded-full shadow-md">
+                  Waiting for color selection...
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -638,7 +623,7 @@ export default function LobbyPage() {
         <div className="text-[8px] text-slate-600 uppercase tracking-widest font-semibold mt-1.5 flex items-center gap-3">
           <span>UNO Real Game Engine v5.0</span>
           <span>•</span>
-          <span>Click cards to select</span>
+          <span>Click cards to play</span>
           {isMyTurn && !isSpectator && (
             <>
               <span>•</span>

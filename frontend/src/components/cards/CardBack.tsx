@@ -21,6 +21,9 @@ export const CardBack: React.FC = () => {
         }}
       />
 
+      {/* Tiny paper thickness rim (using a right-and-bottom border highlight) */}
+      <div className="absolute inset-0 rounded-2xl border-r-[1.5px] border-b-[1.5px] border-white/25 pointer-events-none z-10 translate-x-[0.5px] translate-y-[0.5px]" />
+
       {/* Outer physical cardstock rim shadow for edge shading */}
       <div className="absolute inset-0 rounded-2xl border border-black/35 pointer-events-none z-20" />
       {/* Inner physical cardstock highlight rim */}

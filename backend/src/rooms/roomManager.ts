@@ -24,6 +24,8 @@ export interface Room {
 
 class RoomManager {
   private rooms: Map<string, Room> = new Map();
+  // Map key: `${roomCode}:${playerName}` -> NodeJS.Timeout
+  private disconnectTimers: Map<string, NodeJS.Timeout> = new Map();
 
   // Helper to generate a unique 6-digit room code
   private generateRoomCode(): string {
@@ -48,6 +50,7 @@ class RoomManager {
       status: 'lobby',
     };
     this.rooms.set(code, newRoom);
+    console.log(`[ROOM_CREATED] Code: ${code}`);
     return newRoom;
   }
 
@@ -56,11 +59,63 @@ class RoomManager {
     return this.rooms.get(code.toUpperCase());
   }
 
+  // Expose active room lists for diagnostic logs
+  public getAvailableRooms(): string[] {
+    return Array.from(this.rooms.keys());
+  }
+
+  public getRoomCount(): number {
+    return this.rooms.size;
+  }
+
   // Check if a player name is unique in a room
   public isNameUnique(room: Room, name: string): boolean {
     return !room.players.some(
       (p) => p.name.toLowerCase() === name.toLowerCase()
     );
+  }
+
+  // Start disconnect grace period for player or spectator (60 seconds)
+  public startDisconnectGracePeriod(
+    socketId: string,
+    roomCode: string,
+    onExpired: (result: { room: Room | null; leftPlayer: Player | null; leftSpectator: Spectator | null }) => void
+  ): { playerName: string; isPlayer: boolean } | null {
+    const upperCode = roomCode.toUpperCase();
+    const room = this.rooms.get(upperCode);
+    if (!room) return null;
+
+    const player = room.players.find((p) => p.id === socketId);
+    const spectator = room.spectators?.find((s) => s.id === socketId);
+
+    if (!player && !spectator) return null;
+
+    const name = player ? player.name : spectator!.name;
+    const isPlayer = !!player;
+    const key = `${upperCode}:${name.toLowerCase()}`;
+
+    // Cancel existing timer if any (defensive check)
+    if (this.disconnectTimers.has(key)) {
+      clearTimeout(this.disconnectTimers.get(key));
+    }
+
+    console.log(`[GRACE_PERIOD_START] Starting 60s disconnect grace period for ${isPlayer ? 'Player' : 'Spectator'} ${name} in Room ${upperCode}`);
+
+    const timer = setTimeout(() => {
+      this.disconnectTimers.delete(key);
+      console.log(`[GRACE_PERIOD_EXPIRED] Disconnect grace period expired for ${name} in Room ${upperCode}`);
+      // Actually remove the player/spectator now
+      const result = this.leaveRoom(socketId);
+      if (result) {
+        onExpired(result);
+      } else {
+        onExpired({ room: null, leftPlayer: null, leftSpectator: null });
+      }
+    }, 60000);
+
+    this.disconnectTimers.set(key, timer);
+
+    return { playerName: name, isPlayer };
   }
 
   // Join an existing room via Socket connection
@@ -73,12 +128,23 @@ class RoomManager {
     const room = this.rooms.get(upperCode);
 
     if (!room) {
+      const availableRooms = Array.from(this.rooms.keys()).join(', ');
+      const roomCount = this.rooms.size;
+      console.log(`[ROOM_NOT_FOUND] requested: ${upperCode}, available: ${availableRooms || 'None'}, roomCount: ${roomCount}`);
       throw new Error('Room not found');
     }
 
     console.log(`[ROOM_JOIN_REQUEST] Name: ${playerName}, Socket: ${playerSocketId}, Room: ${upperCode}, Status: ${room.status}`);
     console.log(`[ROOM_PLAYER_COUNT] Room: ${upperCode}, Count: ${room.players.length}`);
     console.log(`[ROOM_CAPACITY] Room: ${upperCode}, Capacity: 6`);
+
+    // Cancel any active disconnect timer for this player/spectator
+    const timerKey = `${upperCode}:${playerName.toLowerCase()}`;
+    if (this.disconnectTimers.has(timerKey)) {
+      clearTimeout(this.disconnectTimers.get(timerKey)!);
+      this.disconnectTimers.delete(timerKey);
+      console.log(`[GRACE_PERIOD_CANCEL] Reconnection detected. Cancelled disconnect grace period for ${playerName} in Room ${upperCode}`);
+    }
 
     // Check if a player with this name already exists in the room (Reconnection Case)
     const existingPlayerByName = room.players.find(
@@ -121,7 +187,22 @@ class RoomManager {
 
       console.log(`[PLAYER_RECONNECTED] Rebound name "${playerName}" from socket ${oldSocketId} to ${playerSocketId}`);
       console.log(`[PLAYER_ASSIGNED_SEAT] Name: ${playerName} (Reconnected), Socket: ${playerSocketId}, Room: ${room.code}, Seat: ${existingPlayerByName.seatNumber}`);
+      console.log(`[ROOM_JOIN] Player: ${playerName}, Socket: ${playerSocketId}, Room: ${room.code}`);
       return { room, player: existingPlayerByName, isSpectator: false };
+    }
+
+    // Check if spectator with same name exists (Spectator Reconnection Case)
+    if (room.spectators) {
+      const existingSpectatorByName = room.spectators.find(
+        (s) => s.name.toLowerCase() === playerName.toLowerCase()
+      );
+      if (existingSpectatorByName) {
+        const oldSocketId = existingSpectatorByName.id;
+        existingSpectatorByName.id = playerSocketId;
+        console.log(`[SPECTATOR_RECONNECTED] Rebound spectator "${playerName}" from socket ${oldSocketId} to ${playerSocketId}`);
+        console.log(`[ROOM_JOIN] Spectator: ${playerName}, Socket: ${playerSocketId}, Room: ${room.code}`);
+        return { room, player: null, isSpectator: true };
+      }
     }
 
     // Spectator Check: Only if the room has 6 or more seated players
@@ -138,6 +219,7 @@ class RoomManager {
         room.spectators.push(spectator);
       }
       console.log(`[PLAYER_ASSIGNED_SPECTATOR] Name: ${playerName}, Socket: ${playerSocketId}, Room: ${room.code}`);
+      console.log(`[ROOM_JOIN] Spectator: ${playerName}, Socket: ${playerSocketId}, Room: ${room.code}`);
       return { room, player: null, isSpectator: true };
     }
 
@@ -170,6 +252,7 @@ class RoomManager {
     room.players.sort((a, b) => a.seatNumber - b.seatNumber);
 
     console.log(`[PLAYER_ASSIGNED_SEAT] Name: ${playerName}, Socket: ${playerSocketId}, Room: ${room.code}, Seat: ${seatNumber}`);
+    console.log(`[ROOM_JOIN] Player: ${playerName}, Socket: ${playerSocketId}, Room: ${room.code}`);
     return { room, player: newPlayer, isSpectator: false };
   }
 
@@ -182,6 +265,15 @@ class RoomManager {
       if (playerIndex !== -1) {
         const [leftPlayer] = room.players.splice(playerIndex, 1);
 
+        // Cancel any active disconnect grace period timer for safety
+        const timerKey = `${code.toUpperCase()}:${leftPlayer.name.toLowerCase()}`;
+        if (this.disconnectTimers.has(timerKey)) {
+          clearTimeout(this.disconnectTimers.get(timerKey)!);
+          this.disconnectTimers.delete(timerKey);
+        }
+
+        console.log(`[ROOM_LEAVE] Player: ${leftPlayer.name}, Socket: ${playerSocketId}, Room: ${code}`);
+
         // If the player was the host and there are other players, elect a new host
         if (leftPlayer.isHost && room.players.length > 0) {
           room.players[0].isHost = true;
@@ -190,6 +282,7 @@ class RoomManager {
 
         // If room is empty, delete it
         if (room.players.length === 0 && (!room.spectators || room.spectators.length === 0)) {
+          console.log(`[ROOM_DELETED] Code: ${code}`);
           this.rooms.delete(code);
           return { room: null, leftPlayer, leftSpectator: null };
         }
@@ -206,7 +299,17 @@ class RoomManager {
         if (specIndex !== -1) {
           const [leftSpectator] = room.spectators.splice(specIndex, 1);
           
+          // Cancel any active disconnect grace period timer for safety
+          const timerKey = `${code.toUpperCase()}:${leftSpectator.name.toLowerCase()}`;
+          if (this.disconnectTimers.has(timerKey)) {
+            clearTimeout(this.disconnectTimers.get(timerKey)!);
+            this.disconnectTimers.delete(timerKey);
+          }
+
+          console.log(`[ROOM_LEAVE] Spectator: ${leftSpectator.name}, Socket: ${playerSocketId}, Room: ${code}`);
+
           if (room.players.length === 0 && room.spectators.length === 0) {
+            console.log(`[ROOM_DELETED] Code: ${code}`);
             this.rooms.delete(code);
             return { room: null, leftPlayer: null, leftSpectator };
           }

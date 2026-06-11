@@ -82,17 +82,17 @@ export const TableScene: React.FC = () => {
 
   // Stable offsets/rotations for discard pile stack rendering
   const discardRotation = (idx: number) => {
-    const angles = [-6, 8, -12, 4, -2, 10, -5];
+    const angles = [-8, 6, -10, 4, 0];
     return angles[idx % angles.length];
   };
 
   const discardOffsetX = (idx: number) => {
-    const offsets = [-3, 2, -1, 3, -2, 1, -3];
+    const offsets = [-4, 3, -2, 4, 0];
     return offsets[idx % offsets.length];
   };
 
   const discardOffsetY = (idx: number) => {
-    const offsets = [1, -2, 3, -1, 2, -3, 1];
+    const offsets = [2, -3, 4, -2, 0];
     return offsets[idx % offsets.length];
   };
 
@@ -163,12 +163,12 @@ export const TableScene: React.FC = () => {
             }`}
             title={isMyTurn && !isProcessing && !isSpectator ? 'Draw Card' : undefined}
           >
-            {Array.from({ length: Math.min(4, Math.ceil(drawPileCount / 12)) }).map((_, idx) => (
+            {Array.from({ length: Math.min(5, drawPileCount) }).map((_, idx) => (
               <div
                 key={`draw-${idx}`}
                 className="absolute"
                 style={{
-                  transform: `translate(calc(-50% + ${idx * 1.5}px), calc(-50% - ${idx * 1.5}px))`,
+                  transform: `translate(calc(-50% + ${idx * 2}px), calc(-50% - ${idx * 2}px))`,
                   zIndex: idx,
                 }}
               >

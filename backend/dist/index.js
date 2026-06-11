@@ -86,6 +86,9 @@ app.post('/api/rooms/join', (req, res) => {
     }
     const room = roomManager_1.roomManager.getRoom(code);
     if (!room) {
+        const availableRooms = roomManager_1.roomManager.getAvailableRooms().join(', ');
+        const roomCount = roomManager_1.roomManager.getRoomCount();
+        console.log(`[ROOM_NOT_FOUND] (REST) requested: ${code.toUpperCase()}, available: ${availableRooms || 'None'}, roomCount: ${roomCount}`);
         res.status(404).json({ error: 'Room not found' });
         return;
     }
@@ -131,6 +134,10 @@ io.on('connection', (socket) => {
     });
     // Join room socket handler
     socket.on('join-room', ({ code, name }) => {
+        if (currentRoomCode) {
+            console.log(`[Socket] Duplicate join-room blocked for socket ${socket.id}. Already in room ${currentRoomCode}`);
+            return;
+        }
         try {
             const upperCode = code.toUpperCase();
             const { room, player, isSpectator } = roomManager_1.roomManager.joinRoom(upperCode, name, socket.id);
@@ -302,29 +309,46 @@ io.on('connection', (socket) => {
     });
     // Manual leave-room event
     socket.on('leave-room', () => {
-        handleLeave(false);
+        handleLeave();
     });
     // Disconnect handler
     socket.on('disconnect', () => {
-        const room = currentRoomCode ? roomManager_1.roomManager.getRoom(currentRoomCode) : null;
-        const player = room ? room.players.find(p => p.id === socket.id) : null;
-        const playerName = player ? player.name : 'Unknown';
-        console.log(`[PLAYER_DISCONNECTED] Player: ${playerName} (${socket.id})`);
-        handleLeave(true);
-    });
-    // Common cleanup logic for leave/disconnect
-    function handleLeave(isDisconnect = false) {
         if (!currentRoomCode)
             return;
         const room = roomManager_1.roomManager.getRoom(currentRoomCode);
-        if (room && room.status === 'playing' && isDisconnect) {
-            const player = room.players.find(p => p.id === socket.id);
-            if (player) {
-                // Game is active, do not vacate the player seat to allow reconnection
-                console.log(`[PLAYER_DISCONNECTED] Retaining seat for ${currentName} (${socket.id}) in active game.`);
-                return;
+        const player = room ? room.players.find(p => p.id === socket.id) : null;
+        const spectator = room ? room.spectators?.find(s => s.id === socket.id) : null;
+        const name = player ? player.name : (spectator ? spectator.name : 'Unknown');
+        console.log(`[PLAYER_DISCONNECTED] Name: ${name} (${socket.id}), Room: ${currentRoomCode}`);
+        const tempRoomCode = currentRoomCode;
+        const graceInfo = roomManager_1.roomManager.startDisconnectGracePeriod(socket.id, tempRoomCode, (result) => {
+            const { room: updatedRoom, leftPlayer, leftSpectator } = result;
+            if (leftPlayer) {
+                console.log(`[Socket] Disconnect grace period expired. Player ${leftPlayer.name} left room ${tempRoomCode}`);
+                io.to(tempRoomCode).emit('player-left', leftPlayer);
             }
+            else if (leftSpectator) {
+                console.log(`[Socket] Disconnect grace period expired. Spectator ${leftSpectator.name} left room ${tempRoomCode}`);
+                io.to(tempRoomCode).emit('spectator-left', leftSpectator);
+            }
+            if (updatedRoom) {
+                io.to(tempRoomCode).emit('lobby-updated', updatedRoom);
+                if (updatedRoom.status === 'playing') {
+                    broadcastGameState(tempRoomCode);
+                }
+            }
+        });
+        if (graceInfo) {
+            console.log(`[Socket] Seat/Spectator slot retained during disconnect grace period for ${name} (${socket.id})`);
         }
+        else {
+            handleLeave();
+        }
+    });
+    // Common cleanup logic for explicit leave
+    function handleLeave() {
+        if (!currentRoomCode)
+            return;
         const result = roomManager_1.roomManager.leaveRoom(socket.id);
         if (result) {
             const { room: updatedRoom, leftPlayer, leftSpectator } = result;
@@ -340,6 +364,9 @@ io.on('connection', (socket) => {
             if (updatedRoom) {
                 // Broadcast the updated lobby to remaining players
                 io.to(currentRoomCode).emit('lobby-updated', updatedRoom);
+                if (updatedRoom.status === 'playing') {
+                    broadcastGameState(currentRoomCode);
+                }
             }
         }
         currentRoomCode = null;

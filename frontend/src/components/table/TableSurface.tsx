@@ -21,19 +21,19 @@ export const TableSurface: React.FC = () => {
   // Define Theme Visual Specs
   const themeSpecs = {
     'classic-green': {
-      gradient: 'radial-gradient(circle at center, #0f3e2b 0%, #051b11 65%, #020b07 100%)',
+      gradient: 'radial-gradient(circle at center, #1b5e3a 0%, #0c331e 60%, #03140a 100%)',
       borderGlow: 'shadow-[inset_0_0_45px_rgba(16,185,129,0.22)]',
       trimBorder: 'border-emerald-600/40 shadow-[inset_0_0_12px_rgba(16,185,129,0.3)]',
       accentColor: 'border-emerald-500/20'
     },
     'premium-blue': {
-      gradient: 'radial-gradient(circle at center, #0f244c 0%, #07122a 65%, #020612 100%)',
+      gradient: 'radial-gradient(circle at center, #1e3a8a 0%, #0f172a 60%, #020617 100%)',
       borderGlow: 'shadow-[inset_0_0_45px_rgba(59,130,246,0.22)]',
       trimBorder: 'border-amber-600/60 shadow-[inset_0_0_12px_rgba(217,119,6,0.35)]',
       accentColor: 'border-blue-500/10'
     },
     'dark-night': {
-      gradient: 'radial-gradient(circle at center, #1e1b4b 0%, #0c0a0f 65%, #020104 100%)',
+      gradient: 'radial-gradient(circle at center, #312e81 0%, #111827 60%, #030712 100%)',
       borderGlow: 'shadow-[inset_0_0_45px_rgba(139,92,246,0.22)]',
       trimBorder: 'border-purple-600/50 shadow-[inset_0_0_12px_rgba(139,92,246,0.3)]',
       accentColor: 'border-purple-500/15'
@@ -67,36 +67,49 @@ export const TableSurface: React.FC = () => {
         }
       `}</style>
       
-      {/* 1. Large Wood Bezel Oval Table */}
+      {/* 1. Wood Side Wall Thickness (Bezel Shadow Layer for 3D depth) */}
       <div 
-        className="w-[74%] h-[58%] rounded-[50%] bg-gradient-to-br from-[#3e1e0f] via-[#1a0b04] to-[#2e150a] flex items-center justify-center relative"
+        className="absolute w-[72%] h-[54%] rounded-[50%] bg-[#150904] translate-y-[10px] pointer-events-none"
         style={{
           boxShadow: `
-            0 35px 85px rgba(0,0,0,0.95), 
+            0 45px 95px rgba(0,0,0,0.98),
+            0 10px 20px rgba(0,0,0,0.8)
+          `
+        }}
+      />
+
+      {/* 2. Main Large Wood Bezel Oval Table */}
+      <div 
+        className="w-[72%] h-[54%] rounded-[50%] bg-gradient-to-br from-[#3e1e0f] via-[#1a0b04] to-[#2e150a] flex items-center justify-center relative"
+        style={{
+          boxShadow: `
             inset 0 6px 16px rgba(255,255,255,0.08),
             0 2px 4px rgba(255,255,255,0.2)
           `,
         }}
       >
-        {/* 2. Custom Border Trim Line (sits at wood inner edge) */}
+        {/* 3. Custom Border Trim Line (sits at wood inner edge) */}
         <div className={`absolute inset-[13px] rounded-[50%] border-2 pointer-events-none z-10 transition-all duration-750 ${specs.trimBorder}`} />
 
-        {/* 3. Outer Edge Chrome Rim Accent */}
+        {/* 4. Outer Edge Chrome Rim Accent */}
         <div className="absolute inset-[15px] rounded-[50%] border border-slate-700/40 pointer-events-none z-10" />
 
-        {/* 4. Dynamic Felt Surface with Radial Gradient */}
+        {/* 5. Dynamic Felt Surface with Radial Gradient */}
         <div 
           className="absolute inset-[16px] rounded-[50%] overflow-hidden transition-all duration-750"
           style={{
             background: specs.gradient
           }}
         >
-          {/* Subtle Felt Fabric Texture Overlay */}
+          {/* Premium Felt Fabric Dual Texture Overlay */}
           <div 
-            className="absolute inset-0 opacity-[0.09] mix-blend-overlay pointer-events-none"
+            className="absolute inset-0 opacity-[0.14] mix-blend-overlay pointer-events-none"
             style={{
-              backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
-              backgroundSize: '7px 7px'
+              backgroundImage: `
+                radial-gradient(circle at 1px 1px, rgba(255,255,255,0.85) 1px, transparent 0),
+                radial-gradient(circle at 2px 2px, rgba(0,0,0,0.6) 1px, transparent 0)
+              `,
+              backgroundSize: '5px 5px, 10px 10px'
             }}
           />
 

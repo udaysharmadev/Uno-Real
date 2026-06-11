@@ -1,23 +1,26 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/useGameStore';
 import { getCardColorHex, getCardValueLabel, isValidMove, CardItem } from '../../lib/cards/cardEngine';
+import { useSocket } from '../../hooks/useSocket';
 
 export const PlayerHand: React.FC = () => {
   const { 
     player, 
     playerCards, 
-    selectedCardId, 
-    setSelectedCardId,
     isProcessing,
+    setIsProcessing,
     discardPile,
     wildColor,
     currentPlayerId,
     gameStatus,
     isSpectator
   } = useGameStore();
+
+  const { playCard } = useSocket();
+  const [invalidShakeCardId, setInvalidShakeCardId] = useState<string | null>(null);
 
   const localSeatNumber = player?.seatNumber || 1;
   const myCards = playerCards[localSeatNumber] || [];
@@ -48,19 +51,31 @@ export const PlayerHand: React.FC = () => {
     return { rot, tx, ty, scale };
   };
 
-  const handleCardClick = (cardId: string) => {
-    if (isProcessing || !isMyTurn || isSpectator) return;
-    setSelectedCardId(selectedCardId === cardId ? null : cardId);
+  const handleCardClick = (card: CardItem, isCardValid: boolean) => {
+    if (isProcessing || isSpectator || !isMyTurn) return;
+    
+    if (isCardValid) {
+      setIsProcessing(true);
+      playCard(card.id);
+    } else {
+      // Trigger card shake and red glow for feedback
+      setInvalidShakeCardId(card.id);
+      setTimeout(() => {
+        setInvalidShakeCardId(null);
+      }, 500);
+    }
   };
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-end pb-1 relative select-none">
       
-      {/* Cards Fan Container (Reduced height to fit smaller viewport and cards) */}
-      <div className="flex justify-center items-end relative h-36 w-full max-w-2xl px-12 mt-1">
+      {/* Cards Fan Container with 3D Perspective */}
+      <div 
+        className="flex justify-center items-end relative h-36 w-full max-w-2xl px-12 mt-1"
+        style={{ perspective: '1000px' }}
+      >
         <AnimatePresence>
           {myCards.map((card, idx) => {
-            const isSelected = selectedCardId === card.id;
             const { rot, tx, ty, scale } = getFanStyles(idx);
             const isWild = card.color === 'wild';
             const cardBg = getCardColorHex(card.color);
@@ -68,28 +83,41 @@ export const PlayerHand: React.FC = () => {
             
             // AUTHORITATIVE MOVE VALIDATION HIGHLIGHTING
             const isCardValid = isMyTurn && !isSpectator && gameStatus === 'playing' && isValidMove(card, topDiscard, wildColor);
+            const isShaking = card.id === invalidShakeCardId;
 
             return (
               <motion.div
                 key={card.id}
                 initial={{ opacity: 0, y: 100, scale: 0.8, rotate: 0 }}
-                animate={{ 
+                animate={isShaking ? {
+                  opacity: 1.0,
+                  x: [tx, tx - 5, tx + 5, tx - 5, tx + 5, tx], // Horizontal shake sequence
+                  y: ty,
+                  rotate: rot,
+                  scale: scale,
+                  zIndex: 50,
+                } : { 
                   opacity: isCardValid ? 1.0 : 0.40, 
-                  y: isSelected ? -20 + ty : ty, // Lift selected card slightly higher (safe bound)
+                  y: ty, 
                   x: tx,
-                  rotate: isSelected ? 0 : rot, 
-                  scale: isSelected ? scale * 1.06 : scale, 
-                  zIndex: isSelected ? 40 : idx + 10
+                  rotate: rot, 
+                  scale: scale, 
+                  zIndex: idx + 10
                 }}
                 exit={{ opacity: 0, y: -60, scale: 0.8, rotate: 0 }}
+                transition={isShaking ? {
+                  duration: 0.4,
+                  ease: 'easeInOut'
+                } : undefined}
                 whileHover={isProcessing || !isCardValid ? {} : { 
                   y: -24, // Deeper hover lift (safe bound)
-                  rotate: 0,
+                  rotateX: 12, // 3D perspective tilt X
+                  rotateY: -8, // 3D perspective tilt Y
                   scale: scale * 1.12, 
                   zIndex: 100,
                   transition: { type: 'spring', stiffness: 450, damping: 20 }
                 }}
-                onClick={() => handleCardClick(card.id)}
+                onClick={() => handleCardClick(card, isCardValid)}
                 className={`absolute w-[95px] h-[142px] rounded-2xl p-2.5 flex flex-col justify-between items-center transition-colors duration-300 border origin-bottom shrink-0 ${
                   isProcessing 
                     ? 'cursor-not-allowed' 
@@ -99,14 +127,14 @@ export const PlayerHand: React.FC = () => {
                 }`}
                 style={{
                   backgroundColor: cardBg,
-                  borderColor: isSelected ? '#3b82f6' : undefined,
-                  boxShadow: isSelected 
-                    ? '0 15px 25px rgba(0,0,0,0.65), 0 3px 10px rgba(0,0,0,0.35)' 
+                  borderColor: isShaking ? '#ef4444' : undefined,
+                  boxShadow: isShaking
+                    ? '0 0 25px rgba(239, 68, 68, 0.85), 0 5px 15px rgba(239, 68, 68, 0.45)'
                     : isCardValid 
                       ? '0 8px 16px rgba(0,0,0,0.45), 0 2px 5px rgba(0,0,0,0.25)' 
                       : '0 3px 6px rgba(0,0,0,0.25)',
                   filter: isCardValid ? 'none' : 'grayscale(40%) brightness(75%)',
-                  pointerEvents: isCardValid && !isProcessing ? 'auto' : 'none',
+                  pointerEvents: 'auto', // Keep pointerEvents always enabled to handle invalid clicks!
                   transformOrigin: 'center 130%', // Rotate from pivot point below card for natural circular fanning
                 }}
               >

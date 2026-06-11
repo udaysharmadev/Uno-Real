@@ -85,6 +85,24 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
 
   const tension = getTensionConfig();
 
+  // Spotlight rotation towards center (50%, 50%)
+  const getSpotlightStyle = (): React.CSSProperties => {
+    const leftPct = parseFloat(coords.left);
+    const topPct = parseFloat(coords.top);
+    const dx = 50 - leftPct;
+    const dy = 50 - topPct;
+    const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+    
+    return {
+      transform: `translateY(-50%) rotate(${angleDeg}deg)`,
+      transformOrigin: '0% 50%',
+      // A nice conical spotlight fading out, matching the green turn ring
+      background: 'conic-gradient(from -20deg at 0% 50%, rgba(16, 185, 129, 0.16) 0deg, rgba(16, 185, 129, 0.03) 20deg, transparent 40deg)',
+      width: '280px',
+      height: '140px',
+    };
+  };
+
   return (
     <motion.div 
       initial={{ scale: 0.7, opacity: 0 }}
@@ -97,6 +115,14 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
         top: coords.top,
       }}
     >
+      {/* Active Turn Spotlight Beam projecting towards center */}
+      {player && isActiveTurn && (
+        <div 
+          className="absolute top-1/2 left-1/2 pointer-events-none -z-30 mix-blend-screen opacity-90 animate-pulse"
+          style={getSpotlightStyle()}
+        />
+      )}
+
       <div 
         onClick={handleInvite}
         onMouseEnter={() => setHovered(true)}
@@ -128,25 +154,33 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
         {player ? (
           // Occupied Seat UI: Premium Avatar + Name Capsule
           <div className="flex flex-col items-center relative z-10">
-            {/* Profile Avatar */}
-            <motion.div
-              whileHover={{ scale: 1.08 }}
-              animate={cardCount > 0 && cardCount <= 3 ? {
-                scale: [1, 1.08, 1, 1.08, 1],
-              } : { scale: 1 }}
-              transition={cardCount > 0 && cardCount <= 3 ? {
-                duration: cardCount === 1 ? 0.7 : cardCount === 2 ? 1.1 : 1.5,
-                repeat: Infinity,
-                ease: "easeInOut"
-              } : { type: 'spring', stiffness: 400, damping: 15 }}
-            >
-              <Avatar 
-                name={player.name} 
-                isHost={player.isHost} 
-                isLocal={isLocal} 
-                size="md" 
-              />
-            </motion.div>
+            {/* Anchoring floor shadow */}
+            <div className="absolute w-[44px] h-[6px] rounded-full bg-black/60 blur-[2.5px] translate-y-[21px] z-0 pointer-events-none" />
+
+            {/* Profile Avatar inside relative wrapper with Chair silhouette */}
+            <div className="relative flex items-center justify-center">
+              {/* Chair silhouette backrest panel */}
+              <div className="absolute w-[46px] h-[46px] rounded-full bg-[#181d28] border border-[#2d3748] -z-10 translate-y-[-2px] shadow-[0_4px_8px_rgba(0,0,0,0.5)] opacity-85 pointer-events-none" />
+              
+              <motion.div
+                whileHover={{ scale: 1.08 }}
+                animate={cardCount > 0 && cardCount <= 3 ? {
+                  scale: [1, 1.08, 1, 1.08, 1],
+                } : { scale: 1 }}
+                transition={cardCount > 0 && cardCount <= 3 ? {
+                  duration: cardCount === 1 ? 0.7 : cardCount === 2 ? 1.1 : 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                } : { type: 'spring', stiffness: 400, damping: 15 }}
+              >
+                <Avatar 
+                  name={player.name} 
+                  isHost={player.isHost} 
+                  isLocal={isLocal} 
+                  size="md" 
+                />
+              </motion.div>
+            </div>
             
             {/* Username Capsule Tag */}
             <div className={`mt-1.5 px-2.5 py-1 rounded-full border backdrop-blur-md transition-all flex items-center justify-center ${
