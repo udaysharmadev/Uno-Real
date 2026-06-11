@@ -1,110 +1,100 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Html } from '@react-three/drei';
 import { Player } from '../../types/game';
-import { User, Shield, UserPlus } from 'lucide-react';
+import { Avatar } from './Avatar';
+import { UserPlus } from 'lucide-react';
+import * as THREE from 'three';
 
 interface PlayerSeatProps {
-  position: [number, number, number];
-  rotationY: number;
+  seatNumber: number;
   player: Player | null;
   isLocal: boolean;
-  seatNumber: number;
+  position: [number, number, number];
 }
 
 export const PlayerSeat: React.FC<PlayerSeatProps> = ({
-  position,
-  rotationY,
+  seatNumber,
   player,
   isLocal,
-  seatNumber,
+  position,
 }) => {
-  // Determine color theme based on player state
-  const getThemeColor = () => {
-    if (!player) return 'border-slate-800/40 text-slate-500 bg-slate-900/40';
-    if (isLocal) return 'border-blue-500/50 text-blue-200 bg-blue-950/80 shadow-[0_0_15px_rgba(59,130,246,0.2)]';
-    return 'border-violet-500/50 text-violet-200 bg-violet-950/80 shadow-[0_0_15px_rgba(139,92,246,0.2)]';
+  const [hovered, setHovered] = useState(false);
+
+  // Invite link copy handler on clicking empty seats
+  const handleInvite = () => {
+    if (player) return;
+    const currentUrl = window.location.href;
+    navigator.clipboard.writeText(currentUrl);
+    alert('Lobby invite link copied to clipboard!');
   };
 
   return (
-    <group position={position} rotation={[0, rotationY, 0]}>
-      {/* 3D Seat Pedestal Base */}
-      <mesh position={[0, -0.08, 0]}>
-        <cylinderGeometry args={[0.5, 0.55, 0.12, 32]} />
-        <meshStandardMaterial
-          color={player ? (isLocal ? '#1e3a8a' : '#4c1d95') : '#1e293b'}
-          roughness={0.4}
-          metalness={0.7}
-        />
-      </mesh>
-
-      {/* Glowing Outer Ring on Pedestal */}
-      <mesh position={[0, -0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.48, 0.52, 32]} />
+    <group position={position}>
+      {/* 1. Subtle 3D table glow marker (Felt decal) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
+        <ringGeometry args={[0.26, 0.29, 32]} />
         <meshBasicMaterial
           color={player ? (isLocal ? '#3b82f6' : '#8b5cf6') : '#475569'}
           transparent
-          opacity={player ? 0.9 : 0.2}
-          side={2}
+          opacity={player ? 0.4 : 0.1}
+          side={THREE.DoubleSide}
         />
       </mesh>
 
-      {/* HTML Overlay Panel (Facing screen/camera using billboard-like behavior) */}
+      {/* 2. Flat pixel-perfect 2D overlay projected at the 3D position */}
       <Html
-        position={[0, 0.4, 0]}
+        transform={false} // Disable 3D tilt/warping, keeping text/images crisp and readable
         center
-        distanceFactor={6} // Scale panel naturally in 3D perspective
-        style={{ pointerEvents: 'none' }}
+        style={{ pointerEvents: 'auto' }}
       >
-        <div className={`w-36 select-none rounded-xl border p-2.5 backdrop-blur-md transition-all duration-300 flex flex-col items-center justify-center text-center ${getThemeColor()}`}>
+        <div 
+          onClick={handleInvite}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className={`flex flex-col items-center justify-center transition-all duration-300 select-none cursor-pointer ${
+            hovered ? 'scale-105' : 'scale-100'
+          }`}
+        >
           {player ? (
-            // Occupied Seat UI
-            <div className="w-full flex flex-col items-center">
-              {/* Avatar Icon */}
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1.5 border ${
-                isLocal 
-                  ? 'bg-blue-500/20 border-blue-400/50' 
-                  : 'bg-violet-500/20 border-violet-400/50'
+            // Occupied Seat UI: Premium Avatar + Name Capsule
+            <div className="flex flex-col items-center">
+              {/* Profile Avatar (Self-contained sizing, gradients and crown) */}
+              <Avatar 
+                name={player.name} 
+                isHost={player.isHost} 
+                isLocal={isLocal} 
+                size="md" 
+              />
+              
+              {/* Username Capsule Tag */}
+              <div className={`mt-1.5 px-2.5 py-1 rounded-full border backdrop-blur-md transition-all flex items-center justify-center ${
+                isLocal
+                  ? 'bg-blue-950/85 border-blue-500/40 text-blue-200 shadow-[0_0_8px_rgba(59,130,246,0.2)]'
+                  : 'bg-slate-900/90 border-slate-800 text-slate-200 shadow-md'
               }`}>
-                <User size={18} className={isLocal ? 'text-blue-400' : 'text-violet-400'} />
-              </div>
-
-              {/* Display Name */}
-              <span className="font-semibold text-sm truncate max-w-full leading-tight text-white mb-0.5">
-                {player.name}
-              </span>
-
-              {/* Host/Player Tag */}
-              <div className="flex items-center gap-1 mt-1">
-                {player.isHost && (
-                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] uppercase px-1 py-0.5 rounded flex items-center gap-0.5">
-                    <Shield size={8} /> Host
-                  </span>
-                )}
-                {isLocal && (
-                  <span className="bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[9px] uppercase px-1 py-0.5 rounded">
-                    You
-                  </span>
-                )}
-                {!isLocal && !player.isHost && (
-                  <span className="text-[9px] text-slate-400 bg-slate-800/40 px-1 py-0.5 rounded">
-                    Player
-                  </span>
-                )}
+                <span className="text-[10px] font-bold tracking-wide text-white leading-none truncate max-w-[75px]">
+                  {player.name}
+                </span>
               </div>
             </div>
           ) : (
-            // Empty Seat UI
-            <div className="w-full flex flex-col items-center py-1">
-              <div className="w-8 h-8 rounded-full border border-dashed border-slate-700/80 flex items-center justify-center mb-1 bg-slate-950/40">
-                <UserPlus size={14} className="text-slate-600" />
+            // Empty Seat UI: Dashed Ring + Subtle Glow + Invite Label
+            <div className="flex flex-col items-center">
+              <div className={`w-10 h-10 rounded-full border border-dashed flex items-center justify-center bg-slate-950/70 backdrop-blur-sm transition-all duration-300 ${
+                hovered
+                  ? 'border-emerald-500/80 bg-emerald-950/20 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.25)]'
+                  : 'border-slate-800 text-slate-600'
+              }`}>
+                <UserPlus size={12} className={hovered ? 'animate-pulse' : ''} />
               </div>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
-                Seat {seatNumber}
-              </span>
-              <span className="text-[9px] text-slate-600 font-medium mt-0.5">
-                Empty
+              <span className={`text-[8px] font-extrabold uppercase tracking-widest mt-1 px-1.5 py-0.5 rounded-full border transition-all duration-300 ${
+                hovered
+                  ? 'bg-emerald-950/80 border-emerald-500/30 text-emerald-400'
+                  : 'bg-slate-950/50 border-slate-900 text-slate-500'
+              }`}>
+                Invite
               </span>
             </div>
           )}
@@ -113,3 +103,4 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
     </group>
   );
 };
+export default PlayerSeat;
