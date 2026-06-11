@@ -1,22 +1,22 @@
 /**
  * Rebuilt seating utility for the 2.5D UNO Real tabletop layout.
- * Defines 6 fixed visual seat coordinates around the expanded oval table.
+ * Defines 6 fixed visual seat coordinates as percentages of the table viewport.
  */
 
 export interface SeatCoords {
-  position: [number, number, number];
-  rotationY: number;
+  left: string;
+  top: string;
+  rotation: number; // rotation in degrees
 }
 
-// 6 Fixed static visual slots around the expanded oval table
-// Adjusted to match the larger table scale so seats sit perfectly on the border
-const STATIC_SEATS: Record<number, [number, number, number]> = {
-  1: [0, 0.05, 2.05],    // Bottom Center (Visual Slot 1 - always local player)
-  2: [2.5, 0.05, 1.0],   // Bottom Right (Visual Slot 2)
-  3: [2.5, 0.05, -1.0],  // Top Right (Visual Slot 3)
-  4: [0, 0.05, -2.05],   // Top Center (Visual Slot 4)
-  5: [-2.5, 0.05, -1.0], // Top Left (Visual Slot 5)
-  6: [-2.5, 0.05, 1.0],  // Bottom Left (Visual Slot 6)
+// 6 Fixed static visual slots around the HTML felt table border
+const STATIC_SEATS: Record<number, { left: string; top: string; rotation: number }> = {
+  1: { left: '50%', top: '88%', rotation: 0 },    // Bottom Center (Visual Slot 1 - always local player)
+  2: { left: '85%', top: '68%', rotation: -12 },  // Bottom Right (Visual Slot 2)
+  3: { left: '85%', top: '32%', rotation: 12 },   // Top Right (Visual Slot 3)
+  4: { left: '50%', top: '12%', rotation: 0 },    // Top Center (Visual Slot 4)
+  5: { left: '15%', top: '32%', rotation: -12 },  // Top Left (Visual Slot 5)
+  6: { left: '15%', top: '68%', rotation: 12 },   // Bottom Left (Visual Slot 6)
 };
 
 /**
@@ -32,17 +32,13 @@ export const getSeatCoords = (
   localSeatNumber: number
 ): SeatCoords => {
   const visualSlot = ((seatNumber - localSeatNumber + 6) % 6) + 1;
-  const position = STATIC_SEATS[visualSlot];
-
-  return {
-    position,
-    rotationY: 0, // Flat facing the screen for maximum 2.5D readability
-  };
+  return STATIC_SEATS[visualSlot];
 };
 
 /**
  * Returns all static visual slot coordinates.
  */
-export const getAllVisualSlots = (): Record<number, [number, number, number]> => {
+export const getAllVisualSlots = (): Record<number, { left: string; top: string; rotation: number }> => {
   return STATIC_SEATS;
 };
+

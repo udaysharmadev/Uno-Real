@@ -119,25 +119,30 @@ export default function LobbyPage() {
     removeCardFromPlayer(localSeatNumber, selectedCardId);
     setSelectedCardId(null);
 
-    // 2. Trigger 3D play-card throw flight path
-    // Starts near bottom center (front of camera), lands on the discard pile (offset right at X=0.72)
-    const startPos: [number, number, number] = [0, -0.1, 1.4];
-    const endPos: [number, number, number] = [0.72, 0.05 + discardPile.length * 0.015, 0];
-    
-    const startRot: [number, number, number] = [-Math.PI / 8, 0, 0];
-    const endRot: [number, number, number] = [0, (Math.random() - 0.5) * 0.45, 0]; // slight random Y tilt
+    // 2. Trigger HTML play-card throw flight path
+    // Starts near bottom center (player hand area), lands on the discard pile at left: 59%, top: 50%
+    const startX = '50%';
+    const startY = '95%';
+    const endX = '59%';
+    const endY = '50%';
 
-    const animator = (window as any).triggerDealCard;
+    const angles = [-6, 8, -12, 4, -2, 10, -5];
+    const finalRot = angles[discardPile.length % angles.length];
+
+    const animator = (window as any).triggerHtmlCardAnimation;
     if (animator) {
       animator(
         selectedOldCard.color,
         selectedOldCard.value,
-        startPos,
-        endPos,
-        startRot,
-        endRot,
+        startX,
+        startY,
+        endX,
+        endY,
+        0, // startRot
+        finalRot, // endRot
+        1.0, // startScale
+        0.72, // endScale
         true, // face up
-        2.5,  // throw speed
         () => {
           // 3. On Arrival: append card to discard pile in store
           setDiscardPile([...discardPile, selectedOldCard]);
@@ -148,6 +153,7 @@ export default function LobbyPage() {
       setDiscardPile([...discardPile, selectedOldCard]);
     }
   };
+
 
   // Render connection/error loading states
   if (!room || !player) {

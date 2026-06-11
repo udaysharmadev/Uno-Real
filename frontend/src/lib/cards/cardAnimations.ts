@@ -38,9 +38,9 @@ export const triggerDealerSequence = (
   // 3. Generate the exact 7 demo cards for the local player
   const localDemoHand = generatePhase3DemoHand();
 
-  // Draw pile coordinate (3D starting point)
-  const deckPos: [number, number, number] = [-0.72, 0.08, 0];
-  const deckRot: [number, number, number] = [0, 0, 0];
+  // Draw pile coordinate percentages
+  const deckX = '41%';
+  const deckY = '50%';
 
   const cardsPerPlayer = 7;
   let throwIndex = 0;
@@ -53,8 +53,8 @@ export const triggerDealerSequence = (
       const delay = throwIndex * 150; // 150ms delay between consecutive card throws
 
       setTimeout(() => {
-        const triggerDealCard = (window as any).triggerDealCard;
-        if (!triggerDealCard) return;
+        const triggerHtmlCardAnimation = (window as any).triggerHtmlCardAnimation;
+        if (!triggerHtmlCardAnimation) return;
 
         // Generate card details
         let card: CardItem;
@@ -62,41 +62,29 @@ export const triggerDealerSequence = (
           // Use the specific requested demo card for this round
           card = localDemoHand[round] || createCard('red', '5');
         } else {
-          // Opponents receive random cards (backs are shown anyway)
+          // Opponents receive random cards
           const colors = ['red', 'blue', 'green', 'yellow'] as const;
           const color = colors[Math.floor(Math.random() * colors.length)];
           const value = String(Math.floor(Math.random() * 10)) as any;
           card = createCard(color, value);
         }
 
-        // Determine destination coordinates in 3D Canvas
-        // Opponents: float above seat. Local player: fly to Visual Slot 1 (bottom center avatar)
-        const transform = getSeatCoords(seatNo, localSeatNumber);
-        
-        // Opponents receive card backs at their seat
-        // Local player cards fly to bottom center seat, then join the bottom panel
-        const endPos: [number, number, number] = [
-          transform.position[0],
-          transform.position[1] + (isLocal ? 0.05 : 0.22), // Elevate opponent cards
-          transform.position[2] - (isLocal ? 0.05 : 0.1), // Pull slightly in front
-        ];
-        
-        const endRot: [number, number, number] = [
-          isLocal ? -Math.PI / 8 : 0.1, 
-          0, 
-          0
-        ];
+        // Determine destination coordinates on the table surface
+        const coords = getSeatCoords(seatNo, localSeatNumber);
 
-        // Trigger the 3D flying card mesh
-        triggerDealCard(
+        // Trigger the HTML card animation
+        triggerHtmlCardAnimation(
           card.color,
           card.value,
-          deckPos,
-          endPos,
-          deckRot,
-          endRot,
-          isLocal, // Face up only for local player
-          2.2, // Speed factor
+          deckX,
+          deckY,
+          coords.left,
+          coords.top,
+          0, // start rotation
+          coords.rotation, // end rotation
+          0.72, // start scale (draw pile size)
+          isLocal ? 0.85 : 0.6, // end scale
+          isLocal, // face up only for local player
           () => {
             // Callback: append card to hand and update deck count
             actions.addCardToPlayer(seatNo, card);
@@ -110,3 +98,4 @@ export const triggerDealerSequence = (
     }
   }
 };
+
