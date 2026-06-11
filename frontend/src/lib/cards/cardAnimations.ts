@@ -39,7 +39,7 @@ export const triggerDealerSequence = (
   const localDemoHand = generatePhase3DemoHand();
 
   // Draw pile coordinate (3D starting point)
-  const deckPos: [number, number, number] = [-0.48, 0.08, 0];
+  const deckPos: [number, number, number] = [-0.72, 0.08, 0];
   const deckRot: [number, number, number] = [0, 0, 0];
 
   const cardsPerPlayer = 7;

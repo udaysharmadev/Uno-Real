@@ -33,15 +33,14 @@ export const UnoCard: React.FC<UnoCardProps> = ({
   useFrame(() => {
     if (!meshRef.current) return;
 
-    // Hover lift: lift by 0.25 units along local Y axis
-    // Selection lift: lift by 0.15 units
+    // Hover lift: lift along local Y axis
     const hoverLift = hovered ? 0.25 : 0;
     const selectLift = isSelected ? 0.15 : 0;
 
     // Calculate dynamic targets
     const targetX = position[0];
     const targetY = position[1] + hoverLift + selectLift;
-    const targetZ = position[2] + (hovered || isSelected ? 0.05 : 0); // Pull slightly forward
+    const targetZ = position[2] + (hovered || isSelected ? 0.05 : 0);
 
     const targetScale = hovered ? 1.08 : 1.0;
 
@@ -71,7 +70,6 @@ export const UnoCard: React.FC<UnoCardProps> = ({
     const isWild = color === 'wild';
     const bgHex = getCardColorHex(color);
     const valueLabel = getCardValueLabel(value);
-    const glowShadow = getCardGlowColor(color);
 
     return (
       <div 
@@ -84,20 +82,19 @@ export const UnoCard: React.FC<UnoCardProps> = ({
           border: isSelected ? '2.5px solid #3b82f6' : '1.5px solid rgba(255,255,255,0.3)',
         }}
       >
-        {/* Subtle texture highlight */}
+        {/* Specular gloss highlight */}
         <div className="absolute inset-0 bg-gradient-to-tr from-black/20 via-transparent to-white/10 pointer-events-none" />
 
         {/* Card Inner White Bezel Ring */}
         <div className="absolute inset-1 rounded-[11px] border border-white/20 pointer-events-none" />
 
-        {/* Top-Left Corner Indicator */}
-        <div className="w-full flex justify-start text-[13px] font-black text-white leading-none relative z-10">
+        {/* Top-Left Corner Index */}
+        <div className="w-full flex justify-start text-[14px] font-black text-white leading-none relative z-10">
           <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">{valueLabel}</span>
         </div>
 
         {/* Center Symbol Area */}
         <div className="relative w-full h-full flex items-center justify-center">
-          
           {/* Central Diagonal Contrast Oval */}
           <div 
             className="absolute w-[86px] h-[106px] rounded-full rotate-[-28deg] border border-white/10"
@@ -108,13 +105,13 @@ export const UnoCard: React.FC<UnoCardProps> = ({
             }}
           />
 
-          {/* Wild Multi-color Wheel Overlay (4 sectors) */}
+          {/* Wild Multi-color Wheel */}
           {isWild && (
-            <div className="absolute w-[70px] h-[70px] rounded-full rotate-45 overflow-hidden flex flex-wrap border border-white/20">
-              <div className="w-1/2 h-1/2 bg-[#ef4444]" /> {/* Red */}
-              <div className="w-1/2 h-1/2 bg-[#3b82f6]" /> {/* Blue */}
-              <div className="w-1/2 h-1/2 bg-[#eab308]" /> {/* Yellow */}
-              <div className="w-1/2 h-1/2 bg-[#10b981]" /> {/* Green */}
+            <div className="absolute w-[70px] h-[70px] rounded-full rotate-45 overflow-hidden flex flex-wrap border border-white/25">
+              <div className="w-1/2 h-1/2 bg-[#ef4444]" />
+              <div className="w-1/2 h-1/2 bg-[#3b82f6]" />
+              <div className="w-1/2 h-1/2 bg-[#eab308]" />
+              <div className="w-1/2 h-1/2 bg-[#10b981]" />
             </div>
           )}
 
@@ -128,8 +125,8 @@ export const UnoCard: React.FC<UnoCardProps> = ({
           </span>
         </div>
 
-        {/* Bottom-Right Corner Indicator (Inverted) */}
-        <div className="w-full flex justify-end text-[13px] font-black text-white leading-none relative z-10 rotate-180">
+        {/* Bottom-Right Corner Index (Inverted) */}
+        <div className="w-full flex justify-end text-[14px] font-black text-white leading-none relative z-10 rotate-180">
           <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">{valueLabel}</span>
         </div>
       </div>
@@ -149,10 +146,9 @@ export const UnoCard: React.FC<UnoCardProps> = ({
       }}
       onPointerDown={handlePointerDown}
     >
-      {/* 3D Physical Card Body */}
+      {/* 3D Physical Card Body (Increased dimensions from 0.62x0.92 to 0.85x1.25) */}
       <mesh castShadow receiveShadow>
-        {/* Card Dimensions: 0.62 width, 0.01 thickness, 0.92 height */}
-        <boxGeometry args={[0.62, 0.012, 0.92]} />
+        <boxGeometry args={[0.85, 0.016, 1.25]} />
         <meshStandardMaterial 
           color="#0f172a" 
           roughness={0.4} 
@@ -160,23 +156,23 @@ export const UnoCard: React.FC<UnoCardProps> = ({
         />
       </mesh>
 
-      {/* Card Face HTML Overlay (Projected in 3D Space) */}
+      {/* Card Face HTML Overlay (distanceFactor adjusted to 135 to scale the 124x184px HTML card to 0.85x1.25 units) */}
       <Html
         transform
-        distanceFactor={200} // Maps 1px to 0.005 units (124px -> 0.62 units, 184px -> 0.92 units)
-        position={[0, 0.007, 0]} // Sit flat on the top face of the card box
-        rotation={[-Math.PI / 2, 0, 0]} // Face upwards
+        distanceFactor={140}
+        position={[0, 0.009, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
         style={{ backfaceVisibility: 'hidden' }}
       >
         {isFaceUp ? renderCardFace() : <CardBack />}
       </Html>
 
-      {/* Card Back HTML Overlay (Projected on bottom face of card box) */}
+      {/* Card Back HTML Overlay */}
       <Html
         transform
-        distanceFactor={200}
-        position={[0, -0.007, 0]} // Sit flat on the bottom face
-        rotation={[Math.PI / 2, 0, 0]} // Face downwards
+        distanceFactor={140}
+        position={[0, -0.009, 0]}
+        rotation={[Math.PI / 2, 0, 0]}
         style={{ backfaceVisibility: 'hidden' }}
       >
         <CardBack />

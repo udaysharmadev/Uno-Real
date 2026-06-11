@@ -1,6 +1,6 @@
 /**
  * Rebuilt seating utility for the 2.5D UNO Real tabletop layout.
- * Defines 6 fixed visual seat coordinates around the oval table.
+ * Defines 6 fixed visual seat coordinates around the expanded oval table.
  */
 
 export interface SeatCoords {
@@ -8,16 +8,15 @@ export interface SeatCoords {
   rotationY: number;
 }
 
-// 6 Fixed static visual slots around the oval table
-// Table center is [0, 0, 0]
-// X represents left/right, Z represents top/bottom (toward/away from camera)
+// 6 Fixed static visual slots around the expanded oval table
+// Adjusted to match the larger table scale so seats sit perfectly on the border
 const STATIC_SEATS: Record<number, [number, number, number]> = {
-  1: [0, 0.05, 1.45],   // Bottom Center (Visual Slot 1 - always local player)
-  2: [1.9, 0.05, 0.7],  // Bottom Right (Visual Slot 2)
-  3: [1.9, 0.05, -0.7], // Top Right (Visual Slot 3)
-  4: [0, 0.05, -1.45],  // Top Center (Visual Slot 4)
-  5: [-1.9, 0.05, -0.7],// Top Left (Visual Slot 5)
-  6: [-1.9, 0.05, 0.7], // Bottom Left (Visual Slot 6)
+  1: [0, 0.05, 2.05],    // Bottom Center (Visual Slot 1 - always local player)
+  2: [2.5, 0.05, 1.0],   // Bottom Right (Visual Slot 2)
+  3: [2.5, 0.05, -1.0],  // Top Right (Visual Slot 3)
+  4: [0, 0.05, -2.05],   // Top Center (Visual Slot 4)
+  5: [-2.5, 0.05, -1.0], // Top Left (Visual Slot 5)
+  6: [-2.5, 0.05, 1.0],  // Bottom Left (Visual Slot 6)
 };
 
 /**
@@ -32,8 +31,6 @@ export const getSeatCoords = (
   seatNumber: number,
   localSeatNumber: number
 ): SeatCoords => {
-  // Determine relative visual slot (1 to 6)
-  // Local player maps to 1, next player to 2, etc.
   const visualSlot = ((seatNumber - localSeatNumber + 6) % 6) + 1;
   const position = STATIC_SEATS[visualSlot];
 

@@ -8,11 +8,10 @@ export const CameraController: React.FC = () => {
   const { camera } = useThree();
 
   useEffect(() => {
-    // Fixed camera placement:
-    // Y=4.6 (height), Z=4.6 (distance) looking at Y=-0.15 (felt center).
-    // This creates an exact stable 45-degree tabletop view of the oval table.
-    camera.position.set(0, 4.6, 4.6);
-    camera.lookAt(new THREE.Vector3(0, -0.15, 0));
+    // Zoom closer: camera at Y=3.4, Z=3.4 looking at center Y=-0.2.
+    // Frames the expanded table to occupy 60% of the screen.
+    camera.position.set(0, 3.4, 3.4);
+    camera.lookAt(new THREE.Vector3(0, -0.2, 0));
     camera.updateProjectionMatrix();
   }, [camera]);
 
