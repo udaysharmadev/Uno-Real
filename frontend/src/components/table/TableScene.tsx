@@ -1,18 +1,31 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import { TableSurface } from './TableSurface';
 import { PlayerSeat } from './PlayerSeat';
 import { CameraController } from './CameraController';
+import { CardStack } from '../cards/CardStack';
+import { CardFan } from '../cards/CardFan';
+import { CardAnimator } from '../cards/CardAnimator';
 import { useGameStore } from '../../store/useGameStore';
 import { getSeatCoords } from '../../utils/seating';
-import { Inbox, Layers } from 'lucide-react';
+import { generatePhase3DemoHand, getOpponentDemoCardCounts } from '../../lib/cards/mockCards';
+import { createCard } from '../../lib/cards/cardEngine';
 import * as THREE from 'three';
 
 export const TableScene: React.FC = () => {
-  const { room, player } = useGameStore();
+  const { 
+    room, 
+    player, 
+    cameraMode,
+    playerCards,
+    discardPile,
+    drawPileCount,
+    setPlayerCards,
+    setDiscardPile,
+    setDrawPileCount
+  } = useGameStore();
 
   const localSeatNumber = player?.seatNumber || 1;
   const TOTAL_SEATS = 6;
@@ -23,6 +36,26 @@ export const TableScene: React.FC = () => {
     return room.players.find((p) => p.seatNumber === seatNo) || null;
   };
 
+  // 1. Initialize Default Board States immediately on mount
+  useEffect(() => {
+    // Populate local player's hand with Phase 3 demo hand: Red 5, Blue Reverse, Yellow Skip, Wild, Green 8, Red Draw Two, Blue 1
+    setPlayerCards(localSeatNumber, generatePhase3DemoHand());
+    
+    // Set draw pile count and default top discard card
+    setDrawPileCount(54);
+    setDiscardPile([createCard('green', '7')]);
+
+    // Give opponents mock cards for visual realism in the 3D space
+    if (room) {
+      room.players.forEach(p => {
+        if (p.seatNumber !== localSeatNumber) {
+          const count = getOpponentDemoCardCounts(p.seatNumber);
+          setPlayerCards(p.seatNumber, Array.from({ length: count }).map(() => createCard('red', '0')));
+        }
+      });
+    }
+  }, [localSeatNumber, room]);
+
   // Map players to the 6 fixed visual seat coordinates relative to the local player
   const seats = Array.from({ length: TOTAL_SEATS }).map((_, index) => {
     const seatNumber = index + 1;
@@ -30,32 +63,38 @@ export const TableScene: React.FC = () => {
     const occupant = getPlayerAtSeat(seatNumber);
     const isLocal = occupant ? occupant.id === player?.id : false;
 
+    // Card fan position: placed slightly inside the table radius (75% distance to center)
+    // and elevated above the felt
+    const handX = transform.position[0] * 0.72;
+    const handZ = transform.position[2] * 0.72;
+    const handY = transform.position[1] + 0.12;
+
     return {
       seatNumber,
       position: transform.position,
       occupant,
       isLocal,
+      handPosition: [handX, handY, handZ] as [number, number, number],
     };
   });
 
   return (
     <div className="w-full h-full relative">
-      {/* High-performance HTML Ambient Vignette Overlay for depth */}
+      {/* Ambient Vignette Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-slate-950/40 pointer-events-none z-10" />
       <div className="absolute inset-0 shadow-[inset_0_0_60px_rgba(3,7,18,0.7)] pointer-events-none z-10" />
 
       {/* 3D Canvas */}
       <Canvas
         shadows
-        camera={{ fov: 30, near: 0.1, far: 20 }} // Narrow FOV (30) for flat isometric tabletop view
+        camera={{ fov: 30, near: 0.1, far: 20 }} // Locked tabletop FOV
         className="w-full h-full"
       >
         <color attach="background" args={['#030712']} />
 
-        {/* Stable Studio Lighting */}
+        {/* Stable Studio Lights */}
         <ambientLight intensity={0.5} />
         
-        {/* Soft overhead light to illuminate table center */}
         <spotLight
           position={[0, 6, 0]}
           angle={0.6}
@@ -69,8 +108,19 @@ export const TableScene: React.FC = () => {
 
         {/* Rebuilt Table Scene Elements */}
         <group position={[0, -0.4, 0]}>
-          {/* Centered Premium Oval Poker-style Table */}
+          {/* Centered Premium Oval Poker felt table */}
           <TableSurface />
+
+          {/* 3D Draw Pile Stack */}
+          <CardStack count={drawPileCount} isDiscard={false} position={[-0.48, 0.01, 0]} />
+
+          {/* 3D Discard Pile Stack */}
+          <CardStack 
+            count={discardPile.length} 
+            isDiscard={true} 
+            topCard={discardPile[discardPile.length - 1]} 
+            position={[0.48, 0.01, 0]} 
+          />
 
           {/* 6 Fixed Player Seats around table circumference */}
           {seats.map((seat) => (
@@ -83,64 +133,23 @@ export const TableScene: React.FC = () => {
             />
           ))}
 
-          {/* --- CENTER PLAY AREA PLACEHOLDERS --- */}
-          
-          {/* Draw Pile Placeholder */}
-          <group position={[-0.48, 0.011, 0]}>
-            {/* 3D Flat Outline Plate on Felt */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow>
-              <planeGeometry args={[0.55, 0.8]} />
-              <meshStandardMaterial 
-                color="#ef4444" 
-                roughness={0.9} 
-                transparent 
-                opacity={0.15} 
+          {/* Opponent Card Fans floating on felt in front of their seats (backs only) */}
+          {seats.map((seat) => {
+            if (seat.isLocal || !seat.occupant) return null;
+            const cardCount = playerCards[seat.seatNumber]?.length || 0;
+            return (
+              <CardFan
+                key={`fan-seat-${seat.seatNumber}`}
+                isLocal={false}
+                cardCount={cardCount}
+                position={seat.handPosition}
+                rotation={[0.15, 0, 0]} // Flat-facing slightly tilted cards
               />
-            </mesh>
-            {/* Draw border ring */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
-              <ringGeometry args={[0.26, 0.28, 4]} />
-              <meshBasicMaterial color="#ef4444" transparent opacity={0.3} />
-            </mesh>
-            {/* Flat 2D HTML tag */}
-            <Html transform={false} center>
-              <div className="flex flex-col items-center gap-1 bg-red-950/70 border border-red-500/35 px-2.5 py-1.5 rounded-xl text-center shadow-lg backdrop-blur-sm min-w-[85px]">
-                <Layers size={13} className="text-red-400" />
-                <span className="text-[8px] font-black uppercase tracking-wider text-red-200">
-                  Draw Pile
-                </span>
-              </div>
-            </Html>
-          </group>
+            );
+          })}
 
-          {/* Discard Pile Placeholder */}
-          <group position={[0.48, 0.011, 0]}>
-            {/* 3D Flat Outline Plate on Felt */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow>
-              <planeGeometry args={[0.55, 0.8]} />
-              <meshStandardMaterial 
-                color="#10b981" 
-                roughness={0.9} 
-                transparent 
-                opacity={0.15} 
-              />
-            </mesh>
-            {/* Discard border ring */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
-              <ringGeometry args={[0.26, 0.28, 4]} />
-              <meshBasicMaterial color="#10b981" transparent opacity={0.3} />
-            </mesh>
-            {/* Flat 2D HTML tag */}
-            <Html transform={false} center>
-              <div className="flex flex-col items-center gap-1 bg-emerald-950/70 border border-emerald-500/35 px-2.5 py-1.5 rounded-xl text-center shadow-lg backdrop-blur-sm min-w-[85px]">
-                <Inbox size={13} className="text-emerald-400" />
-                <span className="text-[8px] font-black uppercase tracking-wider text-emerald-200">
-                  Discard Pile
-                </span>
-              </div>
-            </Html>
-          </group>
-
+          {/* 3D Card Dealing Animation bus */}
+          <CardAnimator />
         </group>
 
         {/* Static Camera Perspective Lock */}

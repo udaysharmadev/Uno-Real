@@ -5,6 +5,8 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useSocket } from '../../../hooks/useSocket';
 import { useGameStore } from '../../../store/useGameStore';
+import { PlayerHand } from '../../../components/cards/PlayerHand';
+import { triggerDealerSequence } from '../../../lib/cards/cardAnimations';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Copy, 
@@ -13,10 +15,14 @@ import {
   Play, 
   ShieldAlert, 
   Loader2, 
-  Layers 
+  Sparkles,
+  ArrowUpCircle,
+  Inbox,
+  Layers
 } from 'lucide-react';
+import { getCardColorHex, getCardValueLabel } from '../../../lib/cards/cardEngine';
 
-// Dynamically import rebuilt 3D Table Scene with SSR disabled
+// Dynamically import full-screen 3D Table Scene with SSR disabled
 const TableScene = dynamic(
   () => import('../../../components/table/TableScene').then((mod) => mod.TableScene),
   { 
@@ -39,13 +45,21 @@ export default function LobbyPage() {
   const roomId = params?.roomId as string;
   const name = searchParams?.get('name');
 
-  const { socket, joinRoom, leaveRoom, startGame } = useSocket();
+  const { socket, joinRoom, leaveRoom } = useSocket();
   const { 
     room, 
     player, 
     error, 
     connectionStatus, 
-    clearAllCards 
+    playerCards,
+    discardPile,
+    selectedCardId,
+    removeCardFromPlayer,
+    setDiscardPile,
+    setSelectedCardId,
+    addCardToPlayer,
+    setDrawPileCount,
+    clearAllCards
   } = useGameStore();
   
   const [copied, setCopied] = useState(false);
@@ -63,7 +77,6 @@ export default function LobbyPage() {
     
     joinRoom(roomId, name);
 
-    // Reset card states on unmount/leave
     return () => {
       leaveRoom();
       clearAllCards();
@@ -80,7 +93,61 @@ export default function LobbyPage() {
 
   const isHost = player?.isHost || false;
   const totalPlayers = room?.players.length || 0;
-  const canStart = totalPlayers >= 2;
+  
+  const localSeatNumber = player?.seatNumber || 1;
+  const myHand = playerCards[localSeatNumber] || [];
+  const selectedOldCard = myHand.find(c => c.id === selectedCardId);
+
+  // Trigger dealer dealing sequence (flies cards round-robin in 3D, then adds them to store)
+  const handleDealDemo = () => {
+    if (!room) return;
+    
+    // Trigger round-robin deal
+    triggerDealerSequence(room.players, localSeatNumber, {
+      clearAllCards,
+      setDrawPileCount,
+      setDiscardPile,
+      addCardToPlayer
+    });
+  };
+
+  // Play Selected Card Animation Flow (flies card from hand to discard stack)
+  const handlePlayCard = () => {
+    if (!selectedCardId || !selectedOldCard) return;
+
+    // 1. Remove card from player hand in store
+    removeCardFromPlayer(localSeatNumber, selectedCardId);
+    setSelectedCardId(null);
+
+    // 2. Trigger 3D play-card throw flight path
+    // Starts near bottom center (front of camera), lands on the discard pile
+    const startPos: [number, number, number] = [0, -0.1, 1.4];
+    const endPos: [number, number, number] = [0.48, 0.05 + discardPile.length * 0.015, 0];
+    
+    const startRot: [number, number, number] = [-Math.PI / 8, 0, 0];
+    const endRot: [number, number, number] = [0, (Math.random() - 0.5) * 0.45, 0]; // slight random Y tilt
+
+    const animator = (window as any).triggerDealCard;
+    if (animator) {
+      animator(
+        selectedOldCard.color,
+        selectedOldCard.value,
+        startPos,
+        endPos,
+        startRot,
+        endRot,
+        true, // face up
+        2.5,  // throw speed
+        () => {
+          // 3. On Arrival: append card to discard pile in store
+          setDiscardPile([...discardPile, selectedOldCard]);
+        }
+      );
+    } else {
+      // Fallback
+      setDiscardPile([...discardPile, selectedOldCard]);
+    }
+  };
 
   // Render connection/error loading states
   if (!room || !player) {
@@ -168,30 +235,46 @@ export default function LobbyPage() {
           </button>
         </header>
 
-        {/* HUD: Bottom Table Actions (Host Start Button) */}
+        {/* HUD: Right Sidebar Controls (Camera mode toggle & Demo deal trigger) */}
+        <aside className="absolute right-4 bottom-4 z-20 pointer-events-auto flex flex-col gap-2.5">
+          {/* Deal Cards Button */}
+          <button
+            onClick={handleDealDemo}
+            className="glass-panel w-12 h-12 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-slate-900/80 text-slate-300 hover:text-white transition-all shadow-lg border border-slate-800"
+            title="Deal demo cards"
+          >
+            <Sparkles size={18} className="text-amber-400" />
+            <span className="text-[8px] font-bold uppercase tracking-wider">Deal</span>
+          </button>
+        </aside>
+
+        {/* HUD: Bottom Table Actions (Play Selected Card / Status message) */}
         <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center z-20 pointer-events-none">
           <div className="pointer-events-auto">
-            {isHost ? (
-              <div className="flex flex-col items-center gap-1.5">
+            {selectedOldCard ? (
+              // Card selected: Show glowing Play button
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="flex flex-col items-center gap-1.5"
+              >
                 <button
-                  disabled={!canStart}
-                  onClick={startGame}
-                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:opacity-40 text-white font-bold py-2.5 px-6 rounded-full shadow-lg transition-all flex items-center gap-2 text-xs uppercase tracking-wider border border-emerald-400/20 disabled:border-transparent hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-none"
+                  onClick={handlePlayCard}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-2.5 px-6 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all flex items-center gap-2 text-xs uppercase tracking-wider border border-blue-400/30 animate-pulse"
                 >
-                  <Play size={12} className="fill-current" /> Start Game
+                  <ArrowUpCircle size={13} /> Play Card ({getCardValueLabel(selectedOldCard.value)})
                 </button>
-                {!canStart && (
-                  <span className="text-[9px] bg-slate-950/85 border border-slate-900/60 text-slate-400 px-2.5 py-1 rounded-full backdrop-blur-sm shadow-md">
-                    Waiting for players to sit ({totalPlayers}/2 minimum)
-                  </span>
-                )}
-              </div>
+              </motion.div>
             ) : (
-              <div className="bg-slate-950/85 border border-slate-900/60 rounded-full px-4 py-1.5 text-center shadow-md backdrop-blur-sm">
-                <span className="text-[9px] text-slate-300 font-semibold tracking-wide uppercase">
-                  Waiting for host to start session...
-                </span>
-              </div>
+              // No selection: show helper overlay if hand has cards
+              myHand.length > 0 && (
+                <div className="bg-slate-950/85 border border-slate-900/60 rounded-full px-4 py-1.5 text-center shadow-md backdrop-blur-sm">
+                  <span className="text-[9px] text-slate-400 font-semibold tracking-wide uppercase">
+                    Select a card from your hand to play
+                  </span>
+                </div>
+              )
             )}
           </div>
         </div>
@@ -201,7 +284,7 @@ export default function LobbyPage() {
       {/* =================================================================== */}
       {/* BOTTOM 25% - Player Hand Area HUD Panel                             */}
       {/* =================================================================== */}
-      <footer className="w-full h-[25%] bg-gradient-to-t from-slate-950 to-slate-900/90 flex flex-col items-center justify-between p-4 relative border-t border-slate-800/40">
+      <footer className="w-full h-[25%] bg-gradient-to-t from-slate-950 to-slate-900/90 flex flex-col items-center justify-between p-3 relative border-t border-slate-800/40">
         {/* Soft neon divider border */}
         <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
 
@@ -211,22 +294,29 @@ export default function LobbyPage() {
           <span>Your Hand</span>
         </div>
 
-        {/* Hand Area Visual Layout Placeholders */}
-        <div className="flex-1 w-full max-w-xl flex items-center justify-center gap-4 mt-2">
-          {/* Dash outline where cards will sit */}
-          <div className="w-full h-full rounded-2xl border border-dashed border-slate-800/80 bg-slate-950/40 flex flex-col items-center justify-center p-4">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-              No Cards Handed
-            </span>
-            <span className="text-[9px] text-slate-600 mt-1">
-              (Cards will be distributed here once gameplay starts in Phase 3)
-            </span>
-          </div>
+        {/* Hand Area Visual Layout Fan */}
+        <div className="flex-1 w-full max-w-xl flex items-center justify-center gap-4 mt-1">
+          {myHand.length > 0 ? (
+            <PlayerHand />
+          ) : (
+            // Dash outline when hand is empty
+            <div className="w-full h-full rounded-2xl border border-dashed border-slate-800/80 bg-slate-950/40 flex flex-col items-center justify-center p-3">
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                No Cards Handed
+              </span>
+              <button
+                onClick={handleDealDemo}
+                className="mt-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-1.5 px-4 rounded-xl text-[10px] uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 border border-blue-500/20"
+              >
+                <Sparkles size={11} className="text-amber-400" /> Deal Demo Hand
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Bottom footer text */}
         <div className="text-[8px] text-slate-600 uppercase tracking-widest font-semibold mt-1">
-          UNO Real Table Engine v2.0 • Fixed 2.5D Tabletop Camera
+          UNO Real Card Engine v2.0 • Interactive 2.5D Fan
         </div>
       </footer>
 
