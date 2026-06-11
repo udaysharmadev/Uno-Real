@@ -10,7 +10,8 @@ export const PlayerHand: React.FC = () => {
     player, 
     playerCards, 
     selectedCardId, 
-    setSelectedCardId 
+    setSelectedCardId,
+    isProcessing
   } = useGameStore();
 
   const localSeatNumber = player?.seatNumber || 1;
@@ -37,6 +38,7 @@ export const PlayerHand: React.FC = () => {
   };
 
   const handleCardClick = (cardId: string) => {
+    if (isProcessing) return;
     setSelectedCardId(selectedCardId === cardId ? null : cardId);
   };
 
@@ -66,7 +68,7 @@ export const PlayerHand: React.FC = () => {
                   zIndex: isSelected ? 40 : idx + 10
                 }}
                 exit={{ opacity: 0, y: -80, scale: 0.8, rotate: 0 }}
-                whileHover={{ 
+                whileHover={isProcessing ? {} : { 
                   y: -36, // Deeper hover lift
                   rotate: 0,
                   scale: 1.12, // Larger scale up
@@ -74,7 +76,9 @@ export const PlayerHand: React.FC = () => {
                   transition: { type: 'spring', stiffness: 450, damping: 20 }
                 }}
                 onClick={() => handleCardClick(card.id)}
-                className="absolute w-[130px] h-[195px] rounded-2xl p-4 cursor-pointer flex flex-col justify-between items-center transition-shadow duration-300 border border-white/25 origin-bottom shrink-0 shadow-[0_6px_15px_rgba(0,0,0,0.5)]"
+                className={`absolute w-[130px] h-[195px] rounded-2xl p-4 flex flex-col justify-between items-center transition-shadow duration-300 border border-white/25 origin-bottom shrink-0 shadow-[0_6px_15px_rgba(0,0,0,0.5)] ${
+                  isProcessing ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'
+                }`}
                 style={{
                   backgroundColor: cardBg,
                   borderColor: isSelected ? '#3b82f6' : 'rgba(255,255,255,0.25)',

@@ -11,6 +11,7 @@ interface PlayerSeatProps {
   isLocal: boolean;
   coords: { left: string; top: string; rotation: number };
   cardCount: number;
+  isActiveTurn?: boolean;
 }
 
 export const PlayerSeat: React.FC<PlayerSeatProps> = ({
@@ -19,6 +20,7 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
   isLocal,
   coords,
   cardCount = 0,
+  isActiveTurn = false,
 }) => {
   const [hovered, setHovered] = useState(false);
 
@@ -32,10 +34,12 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
 
   // Position the opponent card counts so they always point toward the table felt center
   const getOpponentCardsOffsetClass = () => {
-    if (seatNumber === 2 || seatNumber === 3) return 'right-full mr-3.5 top-1/2 -translate-y-1/2';
-    if (seatNumber === 5 || seatNumber === 6) return 'left-full ml-3.5 top-1/2 -translate-y-1/2';
-    if (seatNumber === 4) return 'top-full mt-3 left-1/2 -translate-x-1/2';
-    return 'hidden';
+    const leftPct = parseFloat(coords.left);
+    const topPct = parseFloat(coords.top);
+    if (leftPct > 70) return 'right-full mr-3.5 top-1/2 -translate-y-1/2';
+    if (leftPct < 30) return 'left-full ml-3.5 top-1/2 -translate-y-1/2';
+    if (topPct < 40) return 'top-full mt-3 left-1/2 -translate-x-1/2';
+    return 'top-full mt-3 left-1/2 -translate-x-1/2';
   };
 
   return (
@@ -54,9 +58,14 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
           hovered ? 'scale-105' : 'scale-100'
         }`}
       >
+        {/* Pulsing Active Turn indicator ring */}
+        {player && isActiveTurn && (
+          <div className="absolute inset-[-6px] rounded-full border-2 border-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.6)] z-0 pointer-events-none" />
+        )}
+
         {player ? (
           // Occupied Seat UI: Premium Avatar + Name Capsule
-          <div className="flex flex-col items-center relative">
+          <div className="flex flex-col items-center relative z-10">
             {/* Profile Avatar */}
             <Avatar 
               name={player.name} 
@@ -67,9 +76,11 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
             
             {/* Username Capsule Tag */}
             <div className={`mt-1.5 px-2.5 py-1 rounded-full border backdrop-blur-md transition-all flex items-center justify-center ${
-              isLocal
-                ? 'bg-blue-950/85 border-blue-500/40 text-blue-200 shadow-[0_0_8px_rgba(59,130,246,0.2)]'
-                : 'bg-slate-900/90 border-slate-800 text-slate-200 shadow-md'
+              isActiveTurn
+                ? 'bg-emerald-950/85 border-emerald-500/50 text-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                : isLocal
+                  ? 'bg-blue-950/85 border-blue-500/40 text-blue-200 shadow-[0_0_8px_rgba(59,130,246,0.2)]'
+                  : 'bg-slate-900/90 border-slate-800 text-slate-200 shadow-md'
             }`}>
               <span className="text-[10px] font-bold tracking-wide text-white leading-none truncate max-w-[75px]">
                 {player.name}
@@ -110,7 +121,7 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
           </div>
         ) : (
           // Empty Seat UI: Dashed Ring + Subtle Glow + Invite Label
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center z-10">
             <div className={`w-10 h-10 rounded-full border border-dashed flex items-center justify-center bg-slate-950/70 backdrop-blur-sm transition-all duration-300 ${
               hovered
                 ? 'border-emerald-500/80 bg-emerald-950/20 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.25)]'
@@ -131,6 +142,7 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
     </div>
   );
 };
+
 
 export default PlayerSeat;
 

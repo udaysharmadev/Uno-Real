@@ -1,8 +1,12 @@
 import { useEffect } from 'react';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 import { useGameStore } from '../store/useGameStore';
+import { CardColor } from '../lib/cards/cardEngine';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+
+// Global singleton socket instance to prevent duplicate socket connections
+let sharedSocket: Socket | null = null;
 
 export const useSocket = () => {
   const { 
@@ -11,59 +15,107 @@ export const useSocket = () => {
     setRoom, 
     setPlayer, 
     setError, 
-    setConnectionStatus 
+    setConnectionStatus,
+    setGameState,
+    setIsProcessing
   } = useGameStore();
 
   useEffect(() => {
-    // Single instance check
-    if (socket) return;
+    // 1. Ensure socket creation happens only once (singleton pattern)
+    if (!sharedSocket) {
+      console.log('SOCKET_CREATED');
+      sharedSocket = io(BACKEND_URL, {
+        autoConnect: false,
+        transports: ['websocket'],
+      });
+    }
 
-    setConnectionStatus('connecting');
-    const newSocket = io(BACKEND_URL, {
-      autoConnect: true,
-      transports: ['websocket'],
-    });
+    const socketInstance = sharedSocket;
 
-    newSocket.on('connect', () => {
-      console.log('[Socket] Connected to backend:', newSocket.id);
+    // 2. Attach listeners safely (cleaning up existing ones first to prevent duplicates)
+    socketInstance.off('connect');
+    socketInstance.on('connect', () => {
+      console.log('SOCKET_CONNECTED', socketInstance.id);
       setConnectionStatus('connected');
       setError(null);
     });
 
-    newSocket.on('connect_error', (err) => {
+    socketInstance.off('connect_error');
+    socketInstance.on('connect_error', (err) => {
       console.error('[Socket] Connection error:', err);
       setConnectionStatus('error');
       setError('Unable to connect to game server. Please ensure the backend is running.');
+      setIsProcessing(false);
     });
 
-    newSocket.on('disconnect', (reason) => {
+    socketInstance.off('disconnect');
+    socketInstance.on('disconnect', (reason) => {
       console.log('[Socket] Disconnected:', reason);
       setConnectionStatus('disconnected');
     });
 
-    // Handle lobby/game state updates
-    newSocket.on('joined-successfully', ({ room, player }) => {
-      console.log('[Socket] Joined room successfully:', room.code, player);
+    socketInstance.off('joined-successfully');
+    socketInstance.on('joined-successfully', ({ room, player }) => {
+      console.log('[Socket] Joined room successfully:', room?.code, player);
       setRoom(room);
       setPlayer(player);
       setError(null);
+      setIsProcessing(false);
     });
 
-    newSocket.on('lobby-updated', (updatedRoom) => {
+    socketInstance.off('lobby-updated');
+    socketInstance.on('lobby-updated', (updatedRoom) => {
       console.log('[Socket] Lobby updated:', updatedRoom);
       setRoom(updatedRoom);
+      setIsProcessing(false);
     });
 
-    newSocket.on('error', (err: { message: string }) => {
+    socketInstance.off('game-updated');
+    socketInstance.on('game-updated', (payload) => {
+      console.log('[Socket] Game updated:', payload);
+      setGameState(payload);
+      setIsProcessing(false);
+    });
+
+    socketInstance.off('game-ended');
+    socketInstance.on('game-ended', ({ winnerId, winnerName }) => {
+      console.log('[Socket] Game ended. Winner:', winnerName);
+      setIsProcessing(false);
+    });
+
+    socketInstance.off('error');
+    socketInstance.on('error', (err: { message: string }) => {
       console.error('[Socket] Error from server:', err.message);
       setError(err.message);
+      setIsProcessing(false);
     });
 
-    setSocket(newSocket);
+    // Connect if not already connected
+    if (!socketInstance.connected) {
+      setConnectionStatus('connecting');
+      socketInstance.connect();
+    }
 
-    // Persistent connection: We do not disconnect on unmount so the socket session
-    // survives App Router transitions. We manually clean up when the user clicks 'Leave'.
-  }, [socket, setSocket, setRoom, setPlayer, setError, setConnectionStatus]);
+    // 3. Verify setSocket() is only called when socket actually changes
+    if (socket !== socketInstance) {
+      console.log('SOCKET_STORED');
+      setSocket(socketInstance);
+    }
+
+    // Cleanup: remove listeners to prevent duplicates
+    return () => {
+      console.log('[Socket] Cleaning up listeners for socket:', socketInstance.id);
+      socketInstance.off('connect');
+      socketInstance.off('connect_error');
+      socketInstance.off('disconnect');
+      socketInstance.off('joined-successfully');
+      socketInstance.off('lobby-updated');
+      socketInstance.off('game-updated');
+      socketInstance.off('game-ended');
+      socketInstance.off('error');
+    };
+    // stable setter dependencies (removes 'socket' dependency to avoid render feedback loop)
+  }, [setSocket, setRoom, setPlayer, setError, setConnectionStatus, setGameState, setIsProcessing]);
 
   const createRoom = (name: string) => {
     if (socket) {
@@ -96,11 +148,40 @@ export const useSocket = () => {
     }
   };
 
+  const playCard = (cardId: string) => {
+    if (socket) {
+      socket.emit('play-card', { cardId });
+    }
+  };
+
+  const drawCard = () => {
+    if (socket) {
+      socket.emit('draw-card');
+    }
+  };
+
+  const chooseColor = (color: CardColor) => {
+    if (socket) {
+      socket.emit('choose-color', { color });
+    }
+  };
+
+  const callUno = () => {
+    if (socket) {
+      socket.emit('call-uno');
+    }
+  };
+
   return {
     socket,
     createRoom,
     joinRoom,
     leaveRoom,
     startGame,
+    playCard,
+    drawCard,
+    chooseColor,
+    callUno,
   };
 };
+

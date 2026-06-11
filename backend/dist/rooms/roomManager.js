@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.roomManager = void 0;
+const actions_1 = require("../game/actions");
 class RoomManager {
     rooms = new Map();
     // Helper to generate a unique 6-digit room code
@@ -42,19 +43,43 @@ class RoomManager {
         if (!room) {
             throw new Error('Room not found');
         }
+        // Check if a player with this name already exists in the room (Reconnection Case)
+        const existingPlayerByName = room.players.find((p) => p.name.toLowerCase() === playerName.toLowerCase());
+        if (existingPlayerByName) {
+            const oldSocketId = existingPlayerByName.id;
+            // Update player socket ID
+            existingPlayerByName.id = playerSocketId;
+            // Update host ID if applicable
+            if (room.hostId === oldSocketId) {
+                room.hostId = playerSocketId;
+            }
+            // Rebind active game state properties
+            if (room.game) {
+                const game = room.game;
+                if (game.hands[oldSocketId]) {
+                    game.hands[playerSocketId] = game.hands[oldSocketId];
+                    delete game.hands[oldSocketId];
+                }
+                if (game.unoCalled[oldSocketId] !== undefined) {
+                    game.unoCalled[playerSocketId] = game.unoCalled[oldSocketId];
+                    delete game.unoCalled[oldSocketId];
+                }
+                if (game.currentPlayerId === oldSocketId) {
+                    game.currentPlayerId = playerSocketId;
+                }
+                if (game.colorChooserId === oldSocketId) {
+                    game.colorChooserId = playerSocketId;
+                }
+            }
+            console.log(`[PLAYER_RECONNECTED] Rebound name "${playerName}" from socket ${oldSocketId} to ${playerSocketId}`);
+            return { room, player: existingPlayerByName };
+        }
+        // Normal join validations
         if (room.status === 'playing') {
             throw new Error('Game has already started');
         }
-        // Check if player is already in the room (by socket ID)
-        const existingPlayer = room.players.find((p) => p.id === playerSocketId);
-        if (existingPlayer) {
-            return { room, player: existingPlayer };
-        }
         if (room.players.length >= 6) {
             throw new Error('Room is full (max 6 players)');
-        }
-        if (!this.isNameUnique(room, playerName)) {
-            throw new Error('Display name is already taken in this room');
         }
         // Stable Seating System: Find the lowest vacant seat number between 1 and 6
         const occupiedSeats = new Set(room.players.map((p) => p.seatNumber));
@@ -117,6 +142,7 @@ class RoomManager {
             throw new Error('At least 2 players are required to start the game');
         }
         room.status = 'playing';
+        room.game = (0, actions_1.startGameState)(room.players);
         return room;
     }
 }

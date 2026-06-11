@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Socket } from 'socket.io-client';
 import { Room, Player } from '../types/game';
-import { CardItem } from '../lib/cards/cardEngine';
+import { CardItem, CardColor } from '../lib/cards/cardEngine';
 
 interface GameState {
   socket: Socket | null;
@@ -16,8 +16,21 @@ interface GameState {
   discardPile: CardItem[];
   drawPileCount: number;
   selectedCardId: string | null;
+  isProcessing: boolean;
+
+  // Active UNO Game Engine States
+  currentPlayerId: string | null;
+  currentPlayerSeat: number | null;
+  direction: 'clockwise' | 'counter-clockwise' | null;
+  wildColor: CardColor | null;
+  gameStatus: 'lobby' | 'playing' | 'awaiting_color_selection' | 'ended';
+  colorChooserId: string | null;
+  winnerId: string | null;
+  winnerName: string | null;
+  unoCalled: Record<string, boolean>; // socketId -> boolean
   
   setSocket: (socket: Socket | null) => void;
+  setIsProcessing: (val: boolean) => void;
   setRoom: (room: Room | null) => void;
   setPlayer: (player: Player | null) => void;
   setError: (error: string | null) => void;
@@ -33,6 +46,23 @@ interface GameState {
   setDiscardPile: (cards: CardItem[]) => void;
   setDrawPileCount: (count: number) => void;
   clearAllCards: () => void;
+  
+  // Game state bulk updater
+  setGameState: (payload: {
+    hands: Record<number, CardItem[]>;
+    discardPile: CardItem[];
+    drawPileCount: number;
+    currentPlayerId: string;
+    currentPlayerSeat: number;
+    direction: 'clockwise' | 'counter-clockwise';
+    wildColor: CardColor | null;
+    gameStatus: 'playing' | 'awaiting_color_selection' | 'ended';
+    colorChooserId: string | null;
+    winnerId: string | null;
+    winnerName: string | null;
+    unoCalled: Record<string, boolean>;
+  }) => void;
+  
   reset: () => void;
 }
 
@@ -49,8 +79,21 @@ export const useGameStore = create<GameState>((set) => ({
   discardPile: [],
   drawPileCount: 52,
   selectedCardId: null,
+  isProcessing: false,
+
+  // Active UNO Game Engine defaults
+  currentPlayerId: null,
+  currentPlayerSeat: null,
+  direction: 'clockwise',
+  wildColor: null,
+  gameStatus: 'lobby',
+  colorChooserId: null,
+  winnerId: null,
+  winnerName: null,
+  unoCalled: {},
 
   setSocket: (socket) => set({ socket }),
+  setIsProcessing: (isProcessing) => set({ isProcessing }),
   setRoom: (room) => set({ room }),
   setPlayer: (player) => set({ player }),
   setError: (error) => set({ error }),
@@ -90,8 +133,34 @@ export const useGameStore = create<GameState>((set) => ({
     playerCards: { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] },
     discardPile: [],
     drawPileCount: 52,
-    selectedCardId: null
+    selectedCardId: null,
+    isProcessing: false,
+    currentPlayerId: null,
+    currentPlayerSeat: null,
+    wildColor: null,
+    gameStatus: 'lobby',
+    colorChooserId: null,
+    winnerId: null,
+    winnerName: null,
+    unoCalled: {},
   }),
+
+  setGameState: (payload) => set((state) => ({
+    playerCards: payload.hands,
+    discardPile: payload.discardPile,
+    drawPileCount: payload.drawPileCount,
+    currentPlayerId: payload.currentPlayerId,
+    currentPlayerSeat: payload.currentPlayerSeat,
+    direction: payload.direction,
+    wildColor: payload.wildColor,
+    gameStatus: payload.gameStatus,
+    colorChooserId: payload.colorChooserId,
+    winnerId: payload.winnerId,
+    winnerName: payload.winnerName,
+    unoCalled: payload.unoCalled,
+    isProcessing: false,
+  })),
+
   reset: () => set({ 
     room: null, 
     player: null, 
@@ -100,6 +169,17 @@ export const useGameStore = create<GameState>((set) => ({
     playerCards: { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] },
     discardPile: [],
     drawPileCount: 52,
-    selectedCardId: null
+    selectedCardId: null,
+    isProcessing: false,
+    currentPlayerId: null,
+    currentPlayerSeat: null,
+    direction: 'clockwise',
+    wildColor: null,
+    gameStatus: 'lobby',
+    colorChooserId: null,
+    winnerId: null,
+    winnerName: null,
+    unoCalled: {},
   }),
 }));
+

@@ -7,8 +7,7 @@ import { CardAnimator } from '../cards/CardAnimator';
 import { UnoCard } from '../cards/UnoCard';
 import { useGameStore } from '../../store/useGameStore';
 import { getSeatCoords } from '../../utils/seating';
-import { generatePhase3DemoHand, getOpponentDemoCardCounts } from '../../lib/cards/mockCards';
-import { createCard } from '../../lib/cards/cardEngine';
+import { useSocket } from '../../hooks/useSocket';
 
 export const TableScene: React.FC = () => {
   const { 
@@ -17,39 +16,41 @@ export const TableScene: React.FC = () => {
     playerCards,
     discardPile,
     drawPileCount,
-    setPlayerCards,
-    setDiscardPile,
-    setDrawPileCount
+    currentPlayerId,
+    gameStatus,
+    clearAllCards,
+    isProcessing,
+    setIsProcessing
   } = useGameStore();
 
-  const localSeatNumber = player?.seatNumber || 1;
-  const TOTAL_SEATS = 6;
+  const { drawCard } = useSocket();
 
-  // Helper to fetch player seated at seatNumber
+  const localSeatNumber = player?.seatNumber || 1;
+  const isMyTurn = currentPlayerId === player?.id && gameStatus === 'playing';
+
+  const playersList = room?.players || [];
+  const numPlayers = playersList.length || 2;
+  const localIndex = room ? playersList.findIndex(p => p.id === player?.id) : -1;
+
+  // Helper to fetch player seated at seatNumber (only used in lobby status)
   const getPlayerAtSeat = (seatNo: number) => {
     if (!room) return null;
     return room.players.find((p) => p.seatNumber === seatNo) || null;
   };
 
-  // 1. Initialize Board States immediately on mount
+  // Clear cards when returning to lobby
   useEffect(() => {
-    // Populate local player's hand with Phase 3 demo hand
-    setPlayerCards(localSeatNumber, generatePhase3DemoHand());
-    
-    // Set draw pile count and default top discard card
-    setDrawPileCount(54);
-    setDiscardPile([createCard('green', '7')]);
-
-    // Give opponents mock cards for visual realism
-    if (room) {
-      room.players.forEach(p => {
-        if (p.seatNumber !== localSeatNumber) {
-          const count = getOpponentDemoCardCounts(p.seatNumber);
-          setPlayerCards(p.seatNumber, Array.from({ length: count }).map(() => createCard('red', '0')));
-        }
-      });
+    if (!room || room.status !== 'playing') {
+      clearAllCards();
     }
-  }, [localSeatNumber, room]);
+  }, [room?.status, clearAllCards]);
+
+  const handleDrawPileClick = () => {
+    if (isMyTurn && !isProcessing) {
+      setIsProcessing(true);
+      drawCard();
+    }
+  };
 
   // Stable offsets/rotations for discard pile stack rendering
   const discardRotation = (idx: number) => {
@@ -92,7 +93,15 @@ export const TableScene: React.FC = () => {
 
         {/* Draw Pile (Stacked card backs) */}
         {drawPileCount > 0 && (
-          <div className="absolute left-[41%] top-[50%] -translate-x-1/2 -translate-y-1/2 z-10 scale-[0.72]">
+          <div 
+            onClick={handleDrawPileClick}
+            className={`absolute left-[41%] top-[50%] -translate-x-1/2 -translate-y-1/2 z-10 scale-[0.72] select-none transition-all ${
+              isMyTurn 
+                ? 'cursor-pointer hover:brightness-110 active:scale-[0.68] filter drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' 
+                : 'pointer-events-auto opacity-90'
+            }`}
+            title={isMyTurn ? 'Draw Card' : undefined}
+          >
             {Array.from({ length: Math.min(4, Math.ceil(drawPileCount / 12)) }).map((_, idx) => (
               <div
                 key={`draw-${idx}`}
@@ -107,13 +116,17 @@ export const TableScene: React.FC = () => {
             ))}
             {/* Draw pile count badge floating on top */}
             <div 
-              className="absolute z-30 bg-slate-950/90 border border-slate-800/80 px-2 py-0.5 rounded-full shadow-lg"
+              className={`absolute z-30 border px-2 py-0.5 rounded-full shadow-lg transition-colors ${
+                isMyTurn
+                  ? 'bg-red-950/90 border-red-500 text-red-200 animate-pulse'
+                  : 'bg-slate-950/90 border-slate-800 text-red-400'
+              }`}
               style={{
                 transform: 'translate(-50%, 62px)',
                 left: '0px'
               }}
             >
-              <span className="text-[9px] font-black text-red-400 whitespace-nowrap">
+              <span className="text-[9px] font-black whitespace-nowrap">
                 {drawPileCount}
               </span>
             </div>
@@ -130,7 +143,6 @@ export const TableScene: React.FC = () => {
           ) : (
             // Render top cards with slight random translations/rotations
             discardPile.slice(-5).map((card, idx, arr) => {
-              const isTop = idx === arr.length - 1;
               return (
                 <div
                   key={card.id}
@@ -152,27 +164,77 @@ export const TableScene: React.FC = () => {
           )}
         </div>
 
-        {/* =================================================================== */}
-        {/* SEAT SYSTEM (6 seats surrounding the table)                          */}
-        {/* =================================================================== */}
-        {Array.from({ length: TOTAL_SEATS }).map((_, index) => {
-          const seatNumber = index + 1;
-          const coords = getSeatCoords(seatNumber, localSeatNumber);
-          const occupant = getPlayerAtSeat(seatNumber);
-          const isLocal = occupant ? occupant.id === player?.id : false;
-          const cardCount = playerCards[seatNumber]?.length || 0;
+        {/* Central Turn Status Messages Overlay */}
+        {gameStatus === 'playing' && (
+          <div 
+            className="absolute left-1/2 top-[63%] -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none flex flex-col items-center"
+          >
+            {isMyTurn ? (
+              <div className="px-4 py-1.5 rounded-full bg-emerald-950/90 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.4)] text-center animate-pulse">
+                <span className="text-[10px] font-black tracking-widest text-emerald-400 uppercase">
+                  Your Turn
+                </span>
+              </div>
+            ) : (() => {
+              const activePlayer = room?.players.find(p => p.id === currentPlayerId);
+              return activePlayer ? (
+                <div className="px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 shadow-md text-center">
+                  <span className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
+                    {activePlayer.name}'s Turn
+                  </span>
+                </div>
+              ) : null;
+            })()}
+          </div>
+        )}
 
-          return (
-            <PlayerSeat
-              key={seatNumber}
-              seatNumber={seatNumber}
-              player={occupant}
-              isLocal={isLocal}
-              coords={coords}
-              cardCount={cardCount}
-            />
-          );
-        })}
+        {/* =================================================================== */}
+        {/* SEAT SYSTEM (Dynamic seats based on player count or 6-seat lobby)    */}
+        {/* =================================================================== */}
+        {room && room.status === 'playing' ? (
+          // Active Gameplay: Render only occupied seats with sequential indexing
+          playersList.map((occupant, idx) => {
+            const visualSlotIndex = (idx - localIndex + numPlayers) % numPlayers;
+            const coords = getSeatCoords(visualSlotIndex, 0, numPlayers);
+            const isLocal = occupant.id === player?.id;
+            const cardCount = playerCards[occupant.seatNumber]?.length || 0;
+            const isActiveTurn = occupant.id === currentPlayerId;
+
+            return (
+              <PlayerSeat
+                key={occupant.id}
+                seatNumber={occupant.seatNumber}
+                player={occupant}
+                isLocal={isLocal}
+                coords={coords}
+                cardCount={cardCount}
+                isActiveTurn={isActiveTurn}
+              />
+            );
+          })
+        ) : (
+          // Lobby status: Render all 6 static seats with invitations enabled
+          Array.from({ length: 6 }).map((_, index) => {
+            const seatNumber = index + 1;
+            const coords = getSeatCoords(seatNumber, localSeatNumber, 6);
+            const occupant = getPlayerAtSeat(seatNumber);
+            const isLocal = occupant ? occupant.id === player?.id : false;
+            const cardCount = playerCards[seatNumber]?.length || 0;
+            const isActiveTurn = occupant ? occupant.id === currentPlayerId : false;
+
+            return (
+              <PlayerSeat
+                key={seatNumber}
+                seatNumber={seatNumber}
+                player={occupant}
+                isLocal={isLocal}
+                coords={coords}
+                cardCount={cardCount}
+                isActiveTurn={isActiveTurn}
+              />
+            );
+          })
+        )}
 
         {/* Card Animation Layer (Framer Motion spring bus) */}
         <CardAnimator />
@@ -183,4 +245,5 @@ export const TableScene: React.FC = () => {
 };
 
 export default TableScene;
+
 
