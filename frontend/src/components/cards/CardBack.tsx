@@ -5,13 +5,26 @@ import { Sparkles } from 'lucide-react';
 
 export const CardBack: React.FC = () => {
   return (
-    <div className="w-[124px] h-[184px] bg-slate-950 rounded-2xl border-2 border-slate-800 p-2 flex flex-col justify-between items-center relative overflow-hidden select-none shadow-[0_0_15px_rgba(0,0,0,0.7)]">
+    <div className="w-[124px] h-[184px] bg-slate-950 rounded-2xl p-2 flex flex-col justify-between items-center relative overflow-hidden select-none shadow-[0_10px_20px_rgba(0,0,0,0.55),_0_3px_6px_rgba(0,0,0,0.35)] border border-black/40">
       {/* Background Gradient Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-slate-950 to-blue-950 opacity-90" />
       <div className="absolute inset-0 bg-grid-pattern opacity-10" />
 
       {/* Outer Neon Blue Board Line */}
       <div className="absolute inset-1.5 rounded-[10px] border border-blue-500/25 shadow-[inset_0_0_6px_rgba(59,130,246,0.15)] pointer-events-none" />
+
+      {/* Specular gloss highlight (sharp reflection line simulating glossy card highlight) */}
+      <div 
+        className="absolute inset-0 pointer-events-none z-20 rounded-2xl" 
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.06) 100%)'
+        }}
+      />
+
+      {/* Outer physical cardstock rim shadow for edge shading */}
+      <div className="absolute inset-0 rounded-2xl border border-black/35 pointer-events-none z-20" />
+      {/* Inner physical cardstock highlight rim */}
+      <div className="absolute inset-[3px] rounded-xl border border-white/12 pointer-events-none z-20" />
 
       {/* Decorative Top/Bottom Corner Symbols */}
       <div className="w-full flex justify-between px-1 text-[8px] font-extrabold tracking-widest text-blue-500/40 relative z-10">

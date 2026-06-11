@@ -93,7 +93,7 @@ app.post('/api/rooms/join', (req, res) => {
     const isReconnecting = room.players.some(p => p.name.toLowerCase() === name.toLowerCase());
     let isSpectator = false;
     if (!isReconnecting) {
-        if (room.status === 'playing' || room.players.length >= 6) {
+        if (room.players.length >= 6) {
             isSpectator = true;
         }
     }

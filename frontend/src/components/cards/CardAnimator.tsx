@@ -81,7 +81,11 @@ export const CardAnimator: React.FC = () => {
             animate={{ 
               left: card.endX, 
               top: card.endY, 
-              rotate: card.rotateEnd, 
+              rotate: [
+                card.rotateStart,
+                card.rotateStart + (card.rotateEnd - card.rotateStart) * 0.5 + 14,
+                card.rotateEnd
+              ],
               scale: [card.scaleStart, card.scaleStart * 1.25, card.scaleEnd],
               opacity: 1 
             }}
@@ -104,9 +108,8 @@ export const CardAnimator: React.FC = () => {
                 ease: 'easeInOut'
               },
               rotate: {
-                type: 'spring',
-                stiffness: 130,
-                damping: 15
+                duration: 0.5,
+                ease: [0.25, 0.1, 0.25, 1.0]
               }
             }}
             onAnimationComplete={() => {

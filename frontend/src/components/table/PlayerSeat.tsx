@@ -49,10 +49,47 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
     return 'top-full mt-3 left-1/2 -translate-x-1/2';
   };
 
+  // Low Card Tension Config
+  const getTensionConfig = () => {
+    if (cardCount === 1) {
+      return {
+        glowClass: 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.7)] animate-pulse',
+        badgeClass: 'bg-red-950/90 border-red-500/60 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.4)]',
+        badgeText: 'UNO!',
+        countColor: 'text-red-400'
+      };
+    }
+    if (cardCount === 2) {
+      return {
+        glowClass: 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)] animate-pulse',
+        badgeClass: 'bg-amber-950/90 border-amber-500/50 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.3)]',
+        badgeText: 'DANGER',
+        countColor: 'text-amber-400'
+      };
+    }
+    if (cardCount === 3) {
+      return {
+        glowClass: 'border-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.4)]',
+        badgeClass: 'bg-yellow-950/90 border-yellow-500/40 text-yellow-300 shadow-[0_0_6px_rgba(234,179,8,0.2)]',
+        badgeText: 'WARNING',
+        countColor: 'text-yellow-400'
+      };
+    }
+    return {
+      glowClass: '',
+      badgeClass: isLocal ? 'bg-blue-950/85 border-blue-500/40 text-blue-200 shadow-[0_0_8px_rgba(59,130,246,0.2)]' : 'bg-slate-900/90 border-slate-800 text-slate-200 shadow-md',
+      badgeText: null,
+      countColor: 'text-blue-400'
+    };
+  };
+
+  const tension = getTensionConfig();
+
   return (
     <motion.div 
       initial={{ scale: 0.7, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0.7, opacity: 0 }}
       transition={{ type: 'spring', stiffness: 260, damping: 20 }}
       className="absolute -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center"
       style={{
@@ -73,15 +110,18 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
           <div className="absolute inset-[-8px] rounded-full border-2 border-red-500 animate-ping shadow-[0_0_25px_rgba(239,68,68,0.8)] z-0 pointer-events-none" />
         )}
 
-        {/* Pulsing Active Turn indicator ring */}
-        {player && isActiveTurn && !isUnoMoment && (
-          <div className="absolute inset-[-6px] rounded-full border-2 border-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.6)] z-0 pointer-events-none" />
+        {/* Premium Active Player Turn focus rings */}
+        {player && isActiveTurn && (
+          <>
+            <div className="absolute inset-[-10px] rounded-full border-2 border-dashed border-emerald-400/60 animate-[spin_16s_linear_infinite] z-0 pointer-events-none" />
+            <div className="absolute inset-[-6px] rounded-full border-2 border-emerald-500/50 animate-pulse shadow-[0_0_25px_rgba(16,185,129,0.6),_inset_0_0_10px_rgba(16,185,129,0.3)] z-0 pointer-events-none" />
+          </>
         )}
 
-        {/* Floating UNO! Badge overlay */}
-        {isUnoMoment && (
-          <div className="absolute -top-6 bg-gradient-to-r from-red-600 to-amber-600 border border-red-400 text-white font-black text-[9px] px-2.5 py-0.5 rounded-full shadow-[0_0_12px_rgba(239,68,68,0.85)] animate-bounce z-20 uppercase tracking-widest leading-none">
-            UNO!
+        {/* Low Card Tension Warning Badges (WARNING, DANGER, UNO!) */}
+        {player && tension.badgeText && (
+          <div className={`absolute -top-7 px-2.5 py-0.5 rounded-full font-black text-[7px] tracking-widest uppercase animate-bounce z-20 border transition-all ${tension.badgeClass}`}>
+            {tension.badgeText}
           </div>
         )}
 
@@ -89,22 +129,28 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
           // Occupied Seat UI: Premium Avatar + Name Capsule
           <div className="flex flex-col items-center relative z-10">
             {/* Profile Avatar */}
-            <Avatar 
-              name={player.name} 
-              isHost={player.isHost} 
-              isLocal={isLocal} 
-              size="md" 
-            />
+            <motion.div
+              whileHover={{ scale: 1.08 }}
+              animate={cardCount > 0 && cardCount <= 3 ? {
+                scale: [1, 1.08, 1, 1.08, 1],
+              } : { scale: 1 }}
+              transition={cardCount > 0 && cardCount <= 3 ? {
+                duration: cardCount === 1 ? 0.7 : cardCount === 2 ? 1.1 : 1.5,
+                repeat: Infinity,
+                ease: "easeInOut"
+              } : { type: 'spring', stiffness: 400, damping: 15 }}
+            >
+              <Avatar 
+                name={player.name} 
+                isHost={player.isHost} 
+                isLocal={isLocal} 
+                size="md" 
+              />
+            </motion.div>
             
             {/* Username Capsule Tag */}
             <div className={`mt-1.5 px-2.5 py-1 rounded-full border backdrop-blur-md transition-all flex items-center justify-center ${
-              isUnoMoment
-                ? 'bg-red-950/85 border-red-500/60 text-red-200 shadow-[0_0_12px_rgba(239,68,68,0.4)]'
-                : isActiveTurn
-                  ? 'bg-emerald-950/85 border-emerald-500/50 text-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                  : isLocal
-                    ? 'bg-blue-950/85 border-blue-500/40 text-blue-200 shadow-[0_0_8px_rgba(59,130,246,0.2)]'
-                    : 'bg-slate-900/90 border-slate-800 text-slate-200 shadow-md'
+              tension.badgeClass
             }`}>
               <span className="text-[10px] font-bold tracking-wide text-white leading-none truncate max-w-[75px]">
                 {player.name}
@@ -137,18 +183,28 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
                     );
                   })}
                 </div>
-                {/* Count Badge */}
-                <div className={`px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1.5 border backdrop-blur-sm ${
-                  isUnoMoment 
-                    ? 'bg-red-950/90 border-red-500/30' 
-                    : 'bg-slate-950/90 border-slate-800/85'
+                
+                {/* Dynamic Card Count Badge with smooth number scale pops */}
+                <div className={`px-2.5 py-0.5 rounded-full shadow-lg flex items-center gap-1.5 border backdrop-blur-sm transition-all duration-300 ${
+                  cardCount === 1 
+                    ? 'bg-red-950/90 border-red-500/40 shadow-red-500/15' 
+                    : cardCount === 2
+                      ? 'bg-amber-950/90 border-amber-500/40 shadow-amber-500/15'
+                      : 'bg-slate-950/90 border-slate-800/85 shadow-md'
                 }`}>
-                  <span className={`text-[9px] font-extrabold ${isUnoMoment ? 'text-red-400' : 'text-blue-400'}`}>
-                    {cardCount}
-                  </span>
-                  <span className="text-[7px] font-bold text-slate-400 uppercase tracking-wider">
-                    Cards
-                  </span>
+                  <span className="text-[10px] select-none text-slate-400">🂠</span>
+                  <motion.span 
+                    key={cardCount}
+                    initial={{ scale: 0.7, opacity: 0.6 }}
+                    animate={{ scale: [0.7, 1.25, 1], opacity: 1 }}
+                    transition={{
+                      scale: { duration: 0.35, ease: 'easeOut' },
+                      opacity: { duration: 0.2 }
+                    }}
+                    className={`text-[9px] font-extrabold ${tension.countColor}`}
+                  >
+                    x{cardCount}
+                  </motion.span>
                 </div>
               </div>
             )}

@@ -20,18 +20,68 @@ import {
 } from 'lucide-react';
 import { getCardColorHex, getCardValueLabel, isValidMove } from '../../../lib/cards/cardEngine';
 
-// Dynamically import full-screen 3D Table Scene with SSR disabled
+// Premium Loader Component for elegant loading states
+const PremiumLoader: React.FC<{ message: string; submessage?: string }> = ({ message, submessage }) => {
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950 text-slate-100 gap-6 z-[999] overflow-hidden select-none">
+      {/* Pulsing neon backing glow */}
+      <div className="absolute w-[350px] h-[350px] bg-blue-500/10 rounded-full blur-[80px] animate-pulse pointer-events-none" />
+      
+      {/* Animated Cards Graphic */}
+      <div className="relative w-20 h-28 flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: [-8, 0, -8] }}
+          transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+          className="absolute w-14 h-20 bg-slate-900 border border-slate-800 rounded-xl shadow-lg transform -translate-x-3 rotate-[-8deg] origin-bottom-right flex items-center justify-center"
+        >
+          <span className="text-blue-500/30 text-lg font-black">🂠</span>
+        </motion.div>
+        <motion.div
+          animate={{ rotate: [8, 0, 8] }}
+          transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+          className="absolute w-14 h-20 bg-slate-900 border border-blue-500/30 rounded-xl shadow-2xl transform translate-x-3 rotate-[8deg] origin-bottom-left flex items-center justify-center"
+        >
+          <span className="text-blue-400/80 text-lg font-black">🂠</span>
+        </motion.div>
+        <motion.div
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+          className="absolute w-14 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 border border-white/20 rounded-xl shadow-2xl flex items-center justify-center z-10"
+        >
+          <span className="text-white text-xl font-black">🏆</span>
+        </motion.div>
+      </div>
+      
+      {/* Message and Submessage */}
+      <div className="text-center space-y-2 relative z-10">
+        <h2 className="text-lg font-black text-white uppercase tracking-widest animate-pulse">
+          {message}
+        </h2>
+        {submessage && (
+          <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+            {submessage}
+          </p>
+        )}
+      </div>
+      
+      {/* Premium loading bar */}
+      <div className="w-48 h-[3px] bg-slate-900 rounded-full overflow-hidden relative border border-white/5">
+        <motion.div 
+          animate={{ x: [-200, 200] }}
+          transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+          className="absolute inset-y-0 w-24 bg-gradient-to-r from-transparent via-blue-500 to-transparent"
+        />
+      </div>
+    </div>
+  );
+};
+
+// Dynamically import full-screen 2.5D Table Scene with SSR disabled
 const TableScene = dynamic(
   () => import('../../../components/table/TableScene').then((mod) => mod.TableScene),
   { 
     ssr: false,
-    loading: () => (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950 text-slate-400 gap-4 z-50">
-        <Loader2 className="animate-spin text-blue-500" size={40} />
-        <h2 className="text-lg font-bold text-white tracking-wide">Drawing Card Table...</h2>
-        <p className="text-slate-500 text-xs uppercase font-semibold tracking-wider">UNO Real 2.5D</p>
-      </div>
-    )
+    loading: () => <PremiumLoader message="Drawing Card Table..." submessage="Aligning table felt & wood grain..." />
   }
 );
 
@@ -151,7 +201,11 @@ export default function LobbyPage() {
     isSpectator,
     toasts,
     addToast,
-    removeToast
+    removeToast,
+    tableTheme,
+    setTableTheme,
+    isMuted,
+    toggleMute
   } = useGameStore();
   
   const [copied, setCopied] = useState(false);
@@ -171,7 +225,6 @@ export default function LobbyPage() {
     joinRoom(roomId, name);
 
     return () => {
-      // Do NOT vacate room seat on temporary unmount or StrictMode rerenders
       clearAllCards();
     };
   }, [roomId, name, socket]);
@@ -216,10 +269,7 @@ export default function LobbyPage() {
       return;
     }
 
-    // Set action locking immediately
     setIsProcessing(true);
-
-    // Emit socket play-card directly (no optimistic removal or animation triggers here)
     playCard(selectedOldCard.id);
     setSelectedCardId(null);
   };
@@ -240,6 +290,18 @@ export default function LobbyPage() {
   };
   const winnerCoords = getWinnerCoords();
   const winnerPlayerObj = room?.players.find(p => p.id === winnerId);
+
+  // Calculate final leaderboard standings at ended status
+  const getStandings = () => {
+    if (!room) return [];
+    return [...room.players]
+      .map((p) => {
+        const count = playerCards[p.seatNumber]?.length || 0;
+        return { name: p.name, id: p.id, cardCount: count };
+      })
+      .sort((a, b) => a.cardCount - b.cardCount);
+  };
+  const standings = getStandings();
 
   // Render connection/error loading states
   if (!room || (!player && !isSpectator)) {
@@ -263,13 +325,10 @@ export default function LobbyPage() {
               </button>
             </motion.div>
           ) : (
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="animate-spin text-blue-500" size={40} />
-              <h2 className="text-lg font-bold text-white">Connecting to Lobby...</h2>
-              <p className="text-slate-500 text-xs tracking-wider uppercase font-semibold">
-                Status: {connectionStatus}
-              </p>
-            </div>
+            <PremiumLoader 
+              message="Connecting to Lobby..." 
+              submessage={`Status: ${connectionStatus.toUpperCase()} • Syncing seating slots...`} 
+            />
           )}
         </div>
       </div>
@@ -328,9 +387,9 @@ export default function LobbyPage() {
               exit={{ opacity: 0, y: -10, scale: 0.9, transition: { duration: 0.2 } }}
               className={`pointer-events-auto flex items-center justify-between p-3.5 rounded-2xl shadow-2xl border backdrop-blur-md ${
                 toast.type === 'error'
-                  ? 'bg-red-950/85 border-red-500/30 text-red-200'
+                  ? 'bg-red-950/85 border-red-500/30 text-red-200 shadow-red-500/10'
                   : toast.type === 'success'
-                    ? 'bg-emerald-950/85 border-emerald-500/30 text-emerald-200'
+                    ? 'bg-emerald-950/85 border-emerald-500/30 text-emerald-200 shadow-emerald-500/10'
                     : 'bg-slate-900/90 border-slate-800 text-slate-200'
               }`}
             >
@@ -377,7 +436,7 @@ export default function LobbyPage() {
         )}
 
         {/* HUD: Overlay Top Header Panel */}
-        <header className="absolute top-0 left-0 right-0 p-3.5 flex justify-between items-center z-20 pointer-events-none">
+        <header className="absolute top-0 left-0 right-0 p-3.5 flex justify-between items-center z-20 pointer-events-none gap-2">
           {/* Branding & Status Info */}
           <div className="glass-panel rounded-lg px-3 py-1 flex items-center gap-1.5 pointer-events-auto shadow-md opacity-90">
             <span className={`w-1.5 h-1.5 rounded-full animate-pulse shadow-lg ${isSpectator ? 'bg-amber-500 shadow-amber-500/60' : 'bg-green-500 shadow-green-500/60'}`} />
@@ -386,57 +445,69 @@ export default function LobbyPage() {
             </span>
           </div>
 
-          {/* Turn Direction HUD Widget */}
-          {gameStatus === 'playing' && (
-            <div className="glass-panel rounded-full px-3 py-1 flex items-center gap-2 pointer-events-auto shadow-md text-[9px] font-extrabold uppercase tracking-wider text-indigo-300">
-              🔄 Direction: {direction === 'clockwise' ? 'Clockwise ➡️' : 'Counter-Clockwise ⬅️'}
-            </div>
-          )}
-
-          {/* Active Wild Color Widget */}
-          {gameStatus === 'playing' && wildColor && (
-            <div 
-              className="glass-panel rounded-full px-3.5 py-1 flex items-center gap-2 pointer-events-auto shadow-lg text-[9px] font-black uppercase tracking-widest border"
-              style={{
-                borderColor: getCardColorHex(wildColor),
-                color: getCardColorHex(wildColor),
-                boxShadow: `0 0 10px ${getCardColorHex(wildColor)}30`
-              }}
-            >
-              🎨 Color: {wildColor}
-            </div>
-          )}
-
-          {/* Minimalist Room Code Pill */}
-          <div className="glass-panel rounded-full px-4 py-1 flex items-center gap-2 pointer-events-auto shadow-md opacity-90 max-w-xs text-[10px]">
-            <span className="font-bold text-slate-400">Code:</span>
-            <span className="font-mono font-bold tracking-widest text-blue-400 select-all uppercase">
-              {roomId}
-            </span>
+          <div className="flex gap-2 items-center pointer-events-auto ml-auto">
+            {/* Elegant Sound Toggle Button */}
             <motion.button
-              whileHover={{ scale: 1.18 }}
-              whileTap={{ scale: 0.85 }}
-              onClick={handleCopyCode}
-              className="text-slate-400 hover:text-white transition-all ml-0.5"
-              title="Copy Code"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                toggleMute();
+                addToast(!isMuted ? 'Sound Muted' : 'Sound Enabled', 'info');
+              }}
+              className="glass-panel rounded-full px-3 py-1 text-[9px] font-extrabold text-slate-300 hover:text-white transition-all shadow-md opacity-90 flex items-center gap-1.5 border border-slate-800"
             >
-              {copied ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
+              {isMuted ? '🔇 Muted' : '🔊 Sound'}
+            </motion.button>
+
+            {/* Premium Theme Switcher Toolbar Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                const themes: Array<'classic-green' | 'premium-blue' | 'dark-night'> = ['classic-green', 'premium-blue', 'dark-night'];
+                const currentIdx = themes.indexOf(tableTheme || 'premium-blue');
+                const nextIdx = (currentIdx + 1) % themes.length;
+                setTableTheme(themes[nextIdx]);
+                addToast(`Table theme: ${themes[nextIdx].replace('-', ' ').toUpperCase()}`, 'info');
+              }}
+              className="glass-panel rounded-full px-3 py-1 text-[9px] font-extrabold text-slate-300 hover:text-white transition-all shadow-md opacity-90 flex items-center gap-1.5 border border-slate-800"
+            >
+              🎨 Style: <span className="text-amber-500 uppercase font-black">{tableTheme?.replace('-', ' ')}</span>
+            </motion.button>
+
+            {/* Minimalist Room Code Pill */}
+            <div className="glass-panel rounded-full px-3.5 py-1 flex items-center gap-2 shadow-md opacity-90 text-[10px]">
+              <span className="font-bold text-slate-400">Code:</span>
+              <span className="font-mono font-bold tracking-widest text-blue-400 select-all uppercase">
+                {roomId}
+              </span>
+              <motion.button
+                whileHover={{ scale: 1.18 }}
+                whileTap={{ scale: 0.85 }}
+                onClick={handleCopyCode}
+                className="text-slate-400 hover:text-white transition-all ml-0.5"
+                title="Copy Code"
+              >
+                {copied ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
+              </motion.button>
+            </div>
+
+            {/* Leave Table Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                leaveRoom();
+                router.push('/');
+              }}
+              className="glass-panel rounded-lg px-2.5 py-1 hover:bg-red-950/20 border border-red-500/10 hover:border-red-500/30 text-red-400 hover:text-red-300 text-[10px] font-bold uppercase tracking-wider transition-all shadow-md flex items-center gap-1 opacity-90"
+            >
+              <LogOut size={10} /> Exit
             </motion.button>
           </div>
-
-          {/* Leave Table Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              leaveRoom();
-              router.push('/');
-            }}
-            className="glass-panel rounded-lg px-2.5 py-1 hover:bg-red-950/20 border border-red-500/10 hover:border-red-500/30 text-red-400 hover:text-red-300 text-[10px] font-bold uppercase tracking-wider transition-all pointer-events-auto shadow-md flex items-center gap-1 opacity-90"
-          >
-            <LogOut size={10} /> Exit
-          </motion.button>
         </header>
+
+
 
         {/* HUD: Bottom Table Actions */}
         <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center z-20 pointer-events-none">
@@ -642,35 +713,87 @@ export default function LobbyPage() {
       )}
 
       {/* =================================================================== */}
-      {/* OVERLAYS: Confetti Canvas Game Over Winner Alert                    */}
+      {/* OVERLAYS: Confetti Canvas Game Over Standings & Play Again          */}
       {/* =================================================================== */}
       {gameStatus === 'ended' && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-50 pointer-events-auto overflow-hidden">
           {/* Confetti canvas animation */}
           <ConfettiCanvas />
 
-          <div className="bg-slate-900 border border-amber-500/30 p-8 rounded-3xl flex flex-col items-center gap-6 shadow-[0_0_50px_rgba(245,158,11,0.25)] max-w-sm text-center z-20 relative">
-            <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-3xl font-extrabold animate-bounce">
+          <div className="bg-slate-900 border border-amber-500/30 p-7 rounded-3xl flex flex-col items-center gap-5 shadow-[0_0_50px_rgba(245,158,11,0.25)] max-w-sm w-full text-center z-20 relative">
+            <div className="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-2xl font-extrabold animate-bounce">
               🏆
             </div>
             <div>
-              <h2 className="text-2xl font-black uppercase tracking-widest text-amber-400 animate-pulse">Winner!</h2>
-              <p className="text-slate-200 text-lg font-bold mt-2">
+              <h2 className="text-xl font-black uppercase tracking-widest text-amber-400 animate-pulse">Victory Match!</h2>
+              <p className="text-slate-200 text-md font-bold mt-1">
                 {player && winnerName === player.name ? '🎉 YOU WON THE GAME!' : `🎉 ${winnerName} won the game!`}
               </p>
-              <p className="text-slate-400 text-xs mt-1">The UNO match has concluded</p>
             </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                leaveRoom();
-                router.push('/');
-              }}
-              className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black py-3 px-6 rounded-2xl shadow-lg transition-all text-sm uppercase tracking-wider"
-            >
-              Return to Main Menu
-            </motion.button>
+
+            {/* Standings Leaderboard List */}
+            <div className="w-full border-t border-b border-slate-800 py-3 my-0.5 space-y-2 max-h-48 overflow-y-auto">
+              <span className="text-[8px] font-black uppercase tracking-widest text-slate-500 block text-left mb-1">Final Standings</span>
+              {standings.map((entry, idx) => {
+                const rank = idx + 1;
+                const isWinner = rank === 1;
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+                return (
+                  <div 
+                    key={entry.id}
+                    className={`flex justify-between items-center px-3 py-1.5 rounded-xl border ${
+                      isWinner 
+                        ? 'bg-amber-950/40 border-amber-500/30 text-amber-200' 
+                        : entry.id === player?.id 
+                          ? 'bg-blue-950/40 border-blue-500/20 text-blue-200'
+                          : 'bg-slate-950/60 border-slate-900 text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <span className="font-bold">{medal} #{rank}</span>
+                      <span className="font-black truncate max-w-[100px]">{entry.name}</span>
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400">
+                      {entry.cardCount === 0 ? 'Won' : `${entry.cardCount} cards left`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Play Again Loop Buttons */}
+            <div className="w-full space-y-2">
+              {isHost ? (
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  disabled={isProcessing}
+                  onClick={() => {
+                    setIsProcessing(true);
+                    startGame();
+                  }}
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-2.5 px-6 rounded-2xl shadow-lg transition-all text-xs uppercase tracking-wider border border-emerald-400/20 disabled:opacity-40"
+                >
+                  🔄 Play Again (Host)
+                </motion.button>
+              ) : (
+                <div className="w-full py-2.5 px-4 rounded-xl bg-slate-950/60 border border-slate-900 text-center animate-pulse text-[8px] font-black uppercase tracking-widest text-slate-500">
+                  ⏳ Waiting for host to restart...
+                </div>
+              )}
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  leaveRoom();
+                  router.push('/');
+                }}
+                className="w-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-bold py-2.5 px-4 rounded-2xl text-[10px] uppercase tracking-wide transition-all"
+              >
+                Exit to Main Menu
+              </motion.button>
+            </div>
           </div>
         </div>
       )}

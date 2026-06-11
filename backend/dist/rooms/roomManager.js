@@ -43,6 +43,9 @@ class RoomManager {
         if (!room) {
             throw new Error('Room not found');
         }
+        console.log(`[ROOM_JOIN_REQUEST] Name: ${playerName}, Socket: ${playerSocketId}, Room: ${upperCode}, Status: ${room.status}`);
+        console.log(`[ROOM_PLAYER_COUNT] Room: ${upperCode}, Count: ${room.players.length}`);
+        console.log(`[ROOM_CAPACITY] Room: ${upperCode}, Capacity: 6`);
         // Check if a player with this name already exists in the room (Reconnection Case)
         const existingPlayerByName = room.players.find((p) => p.name.toLowerCase() === playerName.toLowerCase());
         if (existingPlayerByName) {
@@ -72,10 +75,11 @@ class RoomManager {
                 }
             }
             console.log(`[PLAYER_RECONNECTED] Rebound name "${playerName}" from socket ${oldSocketId} to ${playerSocketId}`);
+            console.log(`[PLAYER_ASSIGNED_SEAT] Name: ${playerName} (Reconnected), Socket: ${playerSocketId}, Room: ${room.code}, Seat: ${existingPlayerByName.seatNumber}`);
             return { room, player: existingPlayerByName, isSpectator: false };
         }
-        // Spectator Check
-        const shouldSpectate = room.status === 'playing' || room.players.length >= 6;
+        // Spectator Check: Only if the room has 6 or more seated players
+        const shouldSpectate = room.players.length >= 6;
         if (shouldSpectate) {
             if (!room.spectators) {
                 room.spectators = [];
@@ -86,7 +90,7 @@ class RoomManager {
                 spectator = { id: playerSocketId, name: playerName };
                 room.spectators.push(spectator);
             }
-            console.log(`[SPECTATOR_JOINED] Spectator "${playerName}" (${playerSocketId}) joined room ${room.code}`);
+            console.log(`[PLAYER_ASSIGNED_SPECTATOR] Name: ${playerName}, Socket: ${playerSocketId}, Room: ${room.code}`);
             return { room, player: null, isSpectator: true };
         }
         // Stable Seating System: Find the lowest vacant seat number between 1 and 6
@@ -112,6 +116,7 @@ class RoomManager {
         room.players.push(newPlayer);
         // Sort players by seat number so client lists remain aligned
         room.players.sort((a, b) => a.seatNumber - b.seatNumber);
+        console.log(`[PLAYER_ASSIGNED_SEAT] Name: ${playerName}, Socket: ${playerSocketId}, Room: ${room.code}, Seat: ${seatNumber}`);
         return { room, player: newPlayer, isSpectator: false };
     }
     // Remove player/spectator from whatever room they are in

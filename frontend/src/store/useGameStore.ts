@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Socket } from 'socket.io-client';
 import { Room, Player } from '../types/game';
 import { CardItem, CardColor } from '../lib/cards/cardEngine';
+import { soundManager } from '../utils/soundManager';
 
 interface GameState {
   socket: Socket | null;
@@ -31,9 +32,13 @@ interface GameState {
   isSpectator: boolean;
   reactions: Array<{ id: string; name: string; seatNumber: number | null; emoji: string; isSpectator: boolean }>;
   toasts: Array<{ id: string; message: string; type: 'success' | 'error' | 'info' }>;
+  tableTheme: 'classic-green' | 'premium-blue' | 'dark-night';
+  isMuted: boolean;
   
   addToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   removeToast: (id: string) => void;
+  setTableTheme: (theme: 'classic-green' | 'premium-blue' | 'dark-night') => void;
+  toggleMute: () => void;
   
   setSocket: (socket: Socket | null) => void;
   setIsProcessing: (val: boolean) => void;
@@ -103,6 +108,8 @@ export const useGameStore = create<GameState>((set) => ({
   isSpectator: false,
   reactions: [],
   toasts: [],
+  tableTheme: 'premium-blue',
+  isMuted: false,
 
   addToast: (message, type = 'info') => set((state) => {
     const id = `toast-${Math.random().toString(36).substring(2, 9)}`;
@@ -115,6 +122,12 @@ export const useGameStore = create<GameState>((set) => ({
   removeToast: (id) => set((state) => ({
     toasts: state.toasts.filter((t) => t.id !== id),
   })),
+  setTableTheme: (tableTheme) => set({ tableTheme }),
+  toggleMute: () => set((state) => {
+    const nextMuted = !state.isMuted;
+    soundManager.setEnabled(!nextMuted);
+    return { isMuted: nextMuted };
+  }),
 
   setSocket: (socket) => set({ socket }),
   setIsProcessing: (isProcessing) => set({ isProcessing }),
@@ -165,6 +178,7 @@ export const useGameStore = create<GameState>((set) => ({
     isSpectator: false,
     reactions: [],
     toasts: [],
+    tableTheme: 'premium-blue',
     currentPlayerId: null,
     currentPlayerSeat: null,
     wildColor: null,
@@ -204,6 +218,7 @@ export const useGameStore = create<GameState>((set) => ({
     isSpectator: false,
     reactions: [],
     toasts: [],
+    tableTheme: 'premium-blue',
     currentPlayerId: null,
     currentPlayerSeat: null,
     direction: 'clockwise',

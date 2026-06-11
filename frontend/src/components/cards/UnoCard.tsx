@@ -46,17 +46,24 @@ export const UnoCard: React.FC<UnoCardProps> = ({
       style={{
         backgroundColor: bgHex,
         boxShadow: isSelected 
-          ? `0 0 20px #3b82f6, inset 0 0 10px rgba(255,255,255,0.4)` 
-          : `0 4px 10px rgba(0,0,0,0.5), inset 0 0 8px rgba(255,255,255,0.2)`,
-        border: isSelected ? '2.5px solid #3b82f6' : '1.5px solid rgba(255,255,255,0.3)',
+          ? '0 20px 35px rgba(0,0,0,0.75), 0 5px 15px rgba(0,0,0,0.45)' 
+          : '0 10px 20px rgba(0,0,0,0.5), 0 3px 6px rgba(0,0,0,0.3)',
+        border: isSelected ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
         ...style,
       }}
     >
-      {/* Specular gloss highlight */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-black/20 via-transparent to-white/10 pointer-events-none" />
+      {/* Specular gloss highlight (sharp reflection line simulating glossy card highlight) */}
+      <div 
+        className="absolute inset-0 pointer-events-none z-20 rounded-2xl" 
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.06) 100%)'
+        }}
+      />
 
-      {/* Card Inner White Bezel Ring */}
-      <div className="absolute inset-1 rounded-[11px] border border-white/20 pointer-events-none" />
+      {/* Outer physical cardstock rim shadow for edge shading */}
+      <div className="absolute inset-0 rounded-2xl border border-black/35 pointer-events-none z-20" />
+      {/* Inner physical cardstock highlight rim */}
+      <div className="absolute inset-[3px] rounded-xl border border-white/12 pointer-events-none z-20" />
 
       {/* Top-Left Corner Index */}
       <div className="w-full flex justify-start text-[14px] font-black text-white leading-none relative z-10">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/useGameStore';
 import { getSeatCoords } from '../../utils/seating';
@@ -17,6 +17,23 @@ export const ReactionsHandler: React.FC = () => {
   } = useGameStore();
 
   const { socket } = useSocket();
+  const [isOpen, setIsOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close picker
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   const localSeatNumber = player?.seatNumber || 1;
   const playersList = room?.players || [];
@@ -27,18 +44,16 @@ export const ReactionsHandler: React.FC = () => {
   const sendEmoji = (emoji: string) => {
     if (socket) {
       socket.emit('send-reaction', { emoji });
+      setIsOpen(false); // Auto close on click
     }
   };
 
   return (
     <>
-      {/* =================================================================== */}
-      {/* Floating Reactions Render Layer                                     */}
-      {/* =================================================================== */}
+      {/* Floating Reactions Render Layer */}
       <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
         <AnimatePresence>
           {reactions.map((reaction) => {
-            // Self-destroy after 2.5 seconds
             return (
               <ReactionBubble
                 key={reaction.id}
@@ -55,24 +70,44 @@ export const ReactionsHandler: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* =================================================================== */}
-      {/* Emojis Selector Bar (Bottom Right Panel HUD overlay)               */}
-      {/* =================================================================== */}
-      <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-1.5 pointer-events-auto bg-slate-950/80 border border-slate-900 px-2.5 py-2 rounded-2xl backdrop-blur-md shadow-2xl">
-        <span className="text-[7px] font-black uppercase tracking-widest text-slate-500 mb-0.5">
-          Reactions
-        </span>
-        <div className="flex gap-1">
-          {EMOJIS.map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => sendEmoji(emoji)}
-              className="text-lg hover:scale-125 transition-transform duration-150 active:scale-95 leading-none select-none p-1"
+      {/* Toggle Button + Reactions Picker Popup */}
+      <div className="fixed bottom-24 right-4 z-30 flex flex-col items-end gap-2" ref={pickerRef}>
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.15 }}
+              className="flex flex-col items-center gap-1.5 bg-slate-950/90 border border-slate-800/80 px-3 py-2 rounded-2xl backdrop-blur-md shadow-2xl z-40 pointer-events-auto"
             >
-              {emoji}
-            </button>
-          ))}
-        </div>
+              <span className="text-[7px] font-black uppercase tracking-widest text-slate-500 mb-0.5 select-none">
+                Send Reaction
+              </span>
+              <div className="flex gap-1">
+                {EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => sendEmoji(emoji)}
+                    className="text-lg hover:scale-125 transition-transform duration-150 active:scale-95 leading-none select-none p-1"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setIsOpen(!isOpen)}
+          className="pointer-events-auto glass-panel bg-slate-950/85 hover:bg-slate-900 border border-slate-800 rounded-full px-3.5 py-1.5 text-[10px] font-extrabold text-slate-300 hover:text-white transition-all shadow-lg flex items-center gap-1.5"
+        >
+          <span>😀</span>
+          <span className="uppercase tracking-wider">React</span>
+        </motion.button>
       </div>
     </>
   );
@@ -164,3 +199,4 @@ const ReactionBubble: React.FC<ReactionBubbleProps> = ({
     </motion.div>
   );
 };
+export default ReactionsHandler;

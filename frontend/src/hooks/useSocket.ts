@@ -304,24 +304,36 @@ export const useSocket = () => {
     socketInstance.on('player-joined', (newPlayer) => {
       console.log('[Socket] Player joined:', newPlayer?.name);
       soundManager.play('player_join');
+      if (newPlayer && newPlayer.name) {
+        addToast(`👋 ${newPlayer.name} joined the table!`, 'success');
+      }
     });
 
     socketInstance.off('player-left');
     socketInstance.on('player-left', (leftPlayer) => {
       console.log('[Socket] Player left:', leftPlayer?.name);
       soundManager.play('player_leave');
+      if (leftPlayer && leftPlayer.name) {
+        addToast(`🚪 ${leftPlayer.name} left the table.`, 'info');
+      }
     });
 
     socketInstance.off('spectator-joined');
     socketInstance.on('spectator-joined', ({ name, id }) => {
       console.log('[Socket] Spectator joined:', name);
       soundManager.play('player_join');
+      if (name) {
+        addToast(`⚡ ${name} is now spectating.`, 'info');
+      }
     });
 
     socketInstance.off('spectator-left');
     socketInstance.on('spectator-left', ({ name, id }) => {
       console.log('[Socket] Spectator left:', name);
       soundManager.play('player_leave');
+      if (name) {
+        addToast(`⚡ ${name} stopped spectating.`, 'info');
+      }
     });
 
     // Connect if not already connected
