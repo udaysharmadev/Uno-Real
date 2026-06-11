@@ -7,6 +7,7 @@ import { useSocket } from '../../../hooks/useSocket';
 import { useGameStore } from '../../../store/useGameStore';
 import { PlayerHand } from '../../../components/cards/PlayerHand';
 import { ReactionsHandler } from '../../../components/social/ReactionsHandler';
+import { getSeatCoords } from '../../../utils/seating';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Copy, 
@@ -17,7 +18,7 @@ import {
   ArrowUpCircle,
   Layers
 } from 'lucide-react';
-import { getCardColorHex, getCardValueLabel } from '../../../lib/cards/cardEngine';
+import { getCardColorHex, getCardValueLabel, isValidMove } from '../../../lib/cards/cardEngine';
 
 // Dynamically import full-screen 3D Table Scene with SSR disabled
 const TableScene = dynamic(
@@ -143,15 +144,18 @@ export default function LobbyPage() {
     winnerId,
     winnerName,
     unoCalled,
-    removeCardFromPlayer,
     setSelectedCardId,
     clearAllCards,
     isProcessing,
     setIsProcessing,
-    isSpectator
+    isSpectator,
+    toasts,
+    addToast,
+    removeToast
   } = useGameStore();
   
   const [copied, setCopied] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
 
   // Redirect back if name query parameter is missing
   useEffect(() => {
@@ -167,16 +171,29 @@ export default function LobbyPage() {
     joinRoom(roomId, name);
 
     return () => {
-      leaveRoom();
+      // Do NOT vacate room seat on temporary unmount or StrictMode rerenders
       clearAllCards();
     };
   }, [roomId, name, socket]);
+
+  // Keydown listener to toggle socket debug panel (Ctrl + Shift + D)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        setDebugMode((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Copy room code to clipboard
   const handleCopyCode = () => {
     if (!roomId) return;
     navigator.clipboard.writeText(roomId.toUpperCase());
     setCopied(true);
+    addToast('Lobby code copied to clipboard!', 'success');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -188,62 +205,41 @@ export default function LobbyPage() {
   const myHand = playerCards[localSeatNumber] || [];
   const selectedOldCard = myHand.find(c => c.id === selectedCardId);
 
-  // Play Selected Card Animation Flow (flies card from hand to discard stack)
+  // Authoritative Play Card Trigger
   const handlePlayCard = () => {
     if (!selectedCardId || !selectedOldCard || isProcessing || isSpectator) return;
 
-    // Check validity locally before starting the animation
+    // Check validity locally before sending to server
     const topDiscard = discardPile[discardPile.length - 1];
-    const isColorMatch = !topDiscard || selectedOldCard.color === 'wild' || 
-      (topDiscard.color === 'wild' ? (wildColor === null || selectedOldCard.color === wildColor) : (selectedOldCard.color === topDiscard.color));
-    const isValueMatch = topDiscard && selectedOldCard.value === topDiscard.value;
-
-    if (!isColorMatch && !isValueMatch) {
-      alert('Invalid move! Card must match color, value, or be a Wild card.');
+    if (topDiscard && !isValidMove(selectedOldCard, topDiscard, wildColor)) {
+      addToast('Invalid move! Card must match color, value, or be a Wild card.', 'error');
       return;
     }
 
-    // 1. Remove card from player hand in store (optimistic update)
-    removeCardFromPlayer(localSeatNumber, selectedCardId);
-    setSelectedCardId(null);
+    // Set action locking immediately
     setIsProcessing(true);
 
-    // 2. Trigger HTML play-card throw flight path
-    // Starts near bottom center (player hand area), lands on the discard pile at left: 59%, top: 50%
-    const startX = '50%';
-    const startY = '95%';
-    const endX = '59%';
-    const endY = '50%';
-
-    const angles = [-6, 8, -12, 4, -2, 10, -5];
-    const finalRot = angles[discardPile.length % angles.length];
-
-    const animator = (window as any).triggerHtmlCardAnimation;
-    if (animator) {
-      animator(
-        selectedOldCard.color,
-        selectedOldCard.value,
-        startX,
-        startY,
-        endX,
-        endY,
-        0, // startRot
-        finalRot, // endRot
-        1.0, // startScale
-        0.72, // endScale
-        true, // face up
-        () => {
-          // 3. On Arrival: Emit socket event to finalize on server
-          playCard(selectedOldCard.id);
-        }
-      );
-    } else {
-      // Fallback
-      playCard(selectedOldCard.id);
-    }
+    // Emit socket play-card directly (no optimistic removal or animation triggers here)
+    playCard(selectedOldCard.id);
+    setSelectedCardId(null);
   };
 
   const isMyTurn = currentPlayerId === player?.id && gameStatus === 'playing';
+
+  // Find winner coordinates for localized spotlight render
+  const getWinnerCoords = () => {
+    const winnerPlayer = room?.players.find(p => p.id === winnerId);
+    if (!winnerPlayer || !room) return { left: '50%', top: '50%' };
+    const playerIndex = room.players.findIndex(p => p.id === winnerId);
+    if (playerIndex !== -1) {
+      const localIndex = room.players.findIndex(p => p.id === player?.id);
+      const visualSlotIndex = (playerIndex - (localIndex !== -1 ? localIndex : 0) + room.players.length) % room.players.length;
+      return getSeatCoords(visualSlotIndex, 0, room.players.length);
+    }
+    return getSeatCoords(winnerPlayer.seatNumber, localSeatNumber, 6);
+  };
+  const winnerCoords = getWinnerCoords();
+  const winnerPlayerObj = room?.players.find(p => p.id === winnerId);
 
   // Render connection/error loading states
   if (!room || (!player && !isSpectator)) {
@@ -286,6 +282,77 @@ export default function LobbyPage() {
       {/* Reactions Layer Overlay */}
       <ReactionsHandler />
 
+      {/* Floating Socket Debug Panel */}
+      {debugMode && (
+        <div className="fixed top-4 left-4 z-[99] bg-slate-950/95 border border-red-500/50 p-4 rounded-2xl shadow-2xl font-mono text-[9px] text-slate-200 max-w-xs pointer-events-auto backdrop-blur-md">
+          <div className="flex justify-between items-center border-b border-slate-800 pb-1.5 mb-2">
+            <span className="font-bold text-red-400 uppercase tracking-widest text-[8px]">Socket Debug Panel</span>
+            <span className="bg-red-950/80 text-red-400 px-1 rounded uppercase font-bold text-[7px]">Ctrl+Shift+D</span>
+          </div>
+          <div className="space-y-1.5">
+            <div><span className="text-slate-500">Connected:</span> <span className={socket?.connected ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>{socket?.connected ? 'TRUE' : 'FALSE'}</span></div>
+            <div><span className="text-slate-500">Game Status:</span> <span className="text-blue-400 font-bold uppercase">{gameStatus}</span></div>
+            <div><span className="text-slate-500">Local Player ID:</span> <span className="text-slate-300">{player?.id || 'Spectator/Null'}</span></div>
+            <div><span className="text-slate-500">Current Turn ID:</span> <span className="text-slate-300">{currentPlayerId || 'None'}</span></div>
+            <div><span className="text-slate-500">Current Turn Seat:</span> <span className="text-slate-300">{currentPlayerSeat || 'None'}</span></div>
+            <div><span className="text-slate-500">Discard Pile Size:</span> <span className="text-slate-300">{discardPile.length}</span></div>
+            <div>
+              <span className="text-slate-500">Top Discard:</span>{' '}
+              <span className="text-amber-400 font-bold">
+                {discardPile.length > 0
+                  ? `${discardPile[discardPile.length - 1].color.toUpperCase()} ${discardPile[discardPile.length - 1].value.toUpperCase()}`
+                  : 'None'}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500">Cards In Hand:</span>{' '}
+              <span className="text-purple-400 font-bold">
+                {myHand.length}
+              </span>
+            </div>
+            <div className="max-h-20 overflow-y-auto border-t border-slate-900 pt-1 text-[8px] text-slate-400">
+              {myHand.map(c => `${c.color.toUpperCase()}_${c.value.toUpperCase()}`).join(', ') || 'No cards'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notifications Container */}
+      <div className="fixed top-4 right-4 z-[999] flex flex-col gap-2 pointer-events-none max-w-sm w-full">
+        <AnimatePresence>
+          {toasts.map((toast) => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, y: -20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.9, transition: { duration: 0.2 } }}
+              className={`pointer-events-auto flex items-center justify-between p-3.5 rounded-2xl shadow-2xl border backdrop-blur-md ${
+                toast.type === 'error'
+                  ? 'bg-red-950/85 border-red-500/30 text-red-200'
+                  : toast.type === 'success'
+                    ? 'bg-emerald-950/85 border-emerald-500/30 text-emerald-200'
+                    : 'bg-slate-900/90 border-slate-800 text-slate-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold leading-tight select-none">
+                  {toast.type === 'error' ? '🚨' : toast.type === 'success' ? '✅' : 'ℹ️'}
+                </span>
+                <span className="text-[10px] font-bold tracking-wide leading-tight">
+                  {toast.message}
+                </span>
+              </div>
+              <button
+                onClick={() => removeToast(toast.id)}
+                className="text-slate-400 hover:text-white transition-colors text-[9px] font-black uppercase ml-4"
+              >
+                ✕
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       {/* =================================================================== */}
       {/* TOP 70% - Virtual Card Table Viewport                               */}
       {/* =================================================================== */}
@@ -295,6 +362,19 @@ export default function LobbyPage() {
         <div className="w-full h-full absolute inset-0 z-0">
           <TableScene />
         </div>
+
+        {/* Winner Highlight Spotlight Overlay */}
+        {gameStatus === 'ended' && winnerPlayerObj && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 pointer-events-none z-10"
+            style={{
+              background: `radial-gradient(circle 200px at ${winnerCoords.left} ${winnerCoords.top}, transparent 10%, rgba(3, 7, 18, 0.88) 100%)`
+            }}
+          />
+        )}
 
         {/* HUD: Overlay Top Header Panel */}
         <header className="absolute top-0 left-0 right-0 p-3.5 flex justify-between items-center z-20 pointer-events-none">
@@ -333,17 +413,21 @@ export default function LobbyPage() {
             <span className="font-mono font-bold tracking-widest text-blue-400 select-all uppercase">
               {roomId}
             </span>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.18 }}
+              whileTap={{ scale: 0.85 }}
               onClick={handleCopyCode}
               className="text-slate-400 hover:text-white transition-all ml-0.5"
               title="Copy Code"
             >
               {copied ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
-            </button>
+            </motion.button>
           </div>
 
           {/* Leave Table Button */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => {
               leaveRoom();
               router.push('/');
@@ -351,7 +435,7 @@ export default function LobbyPage() {
             className="glass-panel rounded-lg px-2.5 py-1 hover:bg-red-950/20 border border-red-500/10 hover:border-red-500/30 text-red-400 hover:text-red-300 text-[10px] font-bold uppercase tracking-wider transition-all pointer-events-auto shadow-md flex items-center gap-1 opacity-90"
           >
             <LogOut size={10} /> Exit
-          </button>
+          </motion.button>
         </header>
 
         {/* HUD: Bottom Table Actions */}
@@ -379,7 +463,9 @@ export default function LobbyPage() {
                 {gameStatus === 'lobby' ? (
                   isHost ? (
                     <div className="flex flex-col items-center gap-1.5">
-                      <button
+                      <motion.button
+                        whileHover={!canStart || isProcessing || isSpectator ? {} : { scale: 1.05 }}
+                        whileTap={!canStart || isProcessing || isSpectator ? {} : { scale: 0.95 }}
                         disabled={!canStart || isProcessing || isSpectator}
                         onClick={() => {
                           setIsProcessing(true);
@@ -388,7 +474,7 @@ export default function LobbyPage() {
                         className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:opacity-40 text-white font-bold py-2.5 px-6 rounded-full shadow-md transition-all flex items-center gap-1.5 text-xs uppercase tracking-wider border border-emerald-400/20 disabled:border-transparent disabled:text-slate-500"
                       >
                         Start Game
-                      </button>
+                      </motion.button>
                       {!canStart && (
                         <span className="text-[8px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-2 py-0.5 rounded-full shadow-md">
                           Waiting for players to sit ({totalPlayers}/2 minimum)
@@ -502,7 +588,9 @@ export default function LobbyPage() {
               <p className="text-slate-400 text-xs mt-1">Select the active color for the Wild card</p>
             </div>
             <div className="grid grid-cols-2 gap-4 w-full">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 disabled={isProcessing}
                 onClick={() => {
                   setIsProcessing(true);
@@ -511,8 +599,10 @@ export default function LobbyPage() {
                 className="bg-red-500 hover:bg-red-400 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-red-500/25 transition-all text-sm uppercase tracking-wide border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Red
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 disabled={isProcessing}
                 onClick={() => {
                   setIsProcessing(true);
@@ -521,8 +611,10 @@ export default function LobbyPage() {
                 className="bg-blue-500 hover:bg-blue-400 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-blue-500/25 transition-all text-sm uppercase tracking-wide border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Blue
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 disabled={isProcessing}
                 onClick={() => {
                   setIsProcessing(true);
@@ -531,8 +623,10 @@ export default function LobbyPage() {
                 className="bg-green-500 hover:bg-green-400 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-green-500/25 transition-all text-sm uppercase tracking-wide border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Green
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 disabled={isProcessing}
                 onClick={() => {
                   setIsProcessing(true);
@@ -541,7 +635,7 @@ export default function LobbyPage() {
                 className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold py-4 rounded-2xl shadow-lg hover:shadow-yellow-500/25 transition-all text-sm uppercase tracking-wide border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Yellow
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
@@ -566,7 +660,9 @@ export default function LobbyPage() {
               </p>
               <p className="text-slate-400 text-xs mt-1">The UNO match has concluded</p>
             </div>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => {
                 leaveRoom();
                 router.push('/');
@@ -574,7 +670,7 @@ export default function LobbyPage() {
               className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black py-3 px-6 rounded-2xl shadow-lg transition-all text-sm uppercase tracking-wider"
             >
               Return to Main Menu
-            </button>
+            </motion.button>
           </div>
         </div>
       )}

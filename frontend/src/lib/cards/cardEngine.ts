@@ -119,3 +119,29 @@ export const generateRandomCard = (): CardItem => {
 
   return createCard(color, value);
 };
+
+/**
+ * Validates whether a card can be played on top of the current discard card.
+ */
+export const isValidMove = (
+  card: CardItem,
+  topCard: CardItem | null,
+  wildColor: CardColor | null
+): boolean => {
+  if (!topCard) return true; // Safety fallback if discard pile is empty
+  
+  // 1. Wild cards are always valid to play
+  if (card.color === 'wild') {
+    return true;
+  }
+
+  // 2. If top card is wild, we must match the active chosen wild color
+  if (topCard.color === 'wild') {
+    if (!wildColor) return true; // Safety fallback
+    return card.color === wildColor;
+  }
+
+  // 3. Match color or match value
+  return card.color === topCard.color || card.value === topCard.value;
+};
+

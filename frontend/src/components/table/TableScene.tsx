@@ -20,7 +20,8 @@ export const TableScene: React.FC = () => {
     gameStatus,
     clearAllCards,
     isProcessing,
-    setIsProcessing
+    setIsProcessing,
+    isSpectator
   } = useGameStore();
 
   const { drawCard } = useSocket();
@@ -46,7 +47,7 @@ export const TableScene: React.FC = () => {
   }, [room?.status, clearAllCards]);
 
   const handleDrawPileClick = () => {
-    if (isMyTurn && !isProcessing) {
+    if (isMyTurn && !isProcessing && !isSpectator) {
       setIsProcessing(true);
       drawCard();
     }
@@ -96,11 +97,11 @@ export const TableScene: React.FC = () => {
           <div 
             onClick={handleDrawPileClick}
             className={`absolute left-[41%] top-[50%] -translate-x-1/2 -translate-y-1/2 z-10 scale-[0.72] select-none transition-all ${
-              isMyTurn 
-                ? 'cursor-pointer hover:brightness-110 active:scale-[0.68] filter drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' 
-                : 'pointer-events-auto opacity-90'
+              isMyTurn && !isProcessing && !isSpectator
+                ? 'cursor-pointer hover:brightness-110 active:scale-[0.68] filter drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-auto' 
+                : 'pointer-events-none opacity-50 brightness-75'
             }`}
-            title={isMyTurn ? 'Draw Card' : undefined}
+            title={isMyTurn && !isProcessing && !isSpectator ? 'Draw Card' : undefined}
           >
             {Array.from({ length: Math.min(4, Math.ceil(drawPileCount / 12)) }).map((_, idx) => (
               <div

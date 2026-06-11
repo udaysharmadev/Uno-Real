@@ -114,22 +114,28 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
             {/* Opponent Card Stack visualization next to avatar */}
             {!isLocal && cardCount > 0 && (
               <div className={`absolute ${getOpponentCardsOffsetClass()} flex flex-col items-center z-10 pointer-events-none`}>
-                {/* Visual stacked card backs */}
-                <div className="flex -space-x-3.5 mb-1.5">
-                  {Array.from({ length: Math.min(3, cardCount) }).map((_, idx) => (
-                    <div 
-                      key={`cardback-${idx}`}
-                      className="w-[28px] h-[40px] bg-slate-950 rounded-md border border-slate-700/80 shadow-md relative overflow-hidden shrink-0"
-                      style={{
-                        transform: `rotate(${(idx - 1) * 8}deg) translateY(${Math.abs(idx - 1) * 2}px)`,
-                        background: 'linear-gradient(135deg, #1e1b4b 0%, #030712 100%)',
-                      }}
-                    >
-                      {/* Mini card-back borders */}
-                      <div className="absolute inset-0.5 rounded-[3px] border border-blue-500/10 pointer-events-none" />
-                      <div className="absolute inset-0.5 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
-                    </div>
-                  ))}
+                {/* Visual dynamic fanned card backs */}
+                <div className="flex mb-1.5 justify-center items-end h-[48px]">
+                  {Array.from({ length: cardCount }).map((_, idx) => {
+                    const rot = cardCount <= 1 ? 0 : (idx - (cardCount - 1) / 2) * Math.min(10, 40 / cardCount);
+                    const ty = cardCount <= 1 ? 0 : Math.pow(idx - (cardCount - 1) / 2, 2) * Math.min(1.5, 5 / cardCount);
+                    return (
+                      <div 
+                        key={`cardback-${idx}`}
+                        className="w-[22px] h-[32px] bg-slate-950 rounded-sm border border-slate-700/80 shadow-md relative overflow-hidden shrink-0 transition-all duration-300"
+                        style={{
+                          transform: `rotate(${rot}deg) translateY(${ty}px)`,
+                          background: 'linear-gradient(135deg, #1e1b4b 0%, #030712 100%)',
+                          marginRight: idx < cardCount - 1 ? '-14px' : '0px',
+                          zIndex: idx,
+                        }}
+                      >
+                        {/* Mini card-back borders */}
+                        <div className="absolute inset-0.5 rounded-[2px] border border-blue-500/10 pointer-events-none" />
+                        <div className="absolute inset-0.5 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
+                      </div>
+                    );
+                  })}
                 </div>
                 {/* Count Badge */}
                 <div className={`px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1.5 border backdrop-blur-sm ${

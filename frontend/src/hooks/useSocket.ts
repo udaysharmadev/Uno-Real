@@ -21,7 +21,8 @@ export const useSocket = () => {
     setGameState,
     setIsProcessing,
     setIsSpectator,
-    addReaction
+    addReaction,
+    addToast
   } = useGameStore();
 
   useEffect(() => {
@@ -55,7 +56,7 @@ export const useSocket = () => {
       };
 
       // If initial state load, merge immediately to prevent massive simultaneous fly-in overlaps
-      const isInitialLoad = state.discardPile.length === 0 && payload.discardPile.length > 0 && state.drawPileCount === 52;
+      const isInitialLoad = state.discardPile.length === 0;
 
       if (isInitialLoad) {
         setGameState(payload);
@@ -82,9 +83,20 @@ export const useSocket = () => {
           }
         }
 
-        // Animate flight if it was an opponent
-        // (Local player card plays are animated optimistically in page.tsx)
-        if (playerWhoPlayedSeat !== -1 && playerWhoPlayedSeat !== localSeat) {
+        // Animate flight for the player who played (both local player and opponents)
+        if (playerWhoPlayedSeat !== -1) {
+          // If local player, remove the card from the client-side store hand immediately 
+          // at the start of the flight to avoid rendering a duplicate card
+          if (playerWhoPlayedSeat === localSeat) {
+            const currentHand = state.playerCards[localSeat] || [];
+            useGameStore.setState({
+              playerCards: {
+                ...state.playerCards,
+                [localSeat]: currentHand.filter(c => c.id !== playedCard.id)
+              }
+            });
+          }
+
           const coords = getCoordsForSeat(playerWhoPlayedSeat);
           const animator = (window as any).triggerHtmlCardAnimation;
           
@@ -99,17 +111,13 @@ export const useSocket = () => {
               '50%', // Discard Pile Y
               coords.rotation,
               0, // end rotation
-              0.6, // start scale
+              playerWhoPlayedSeat === localSeat ? 1.0 : 0.6, // start scale
               0.72, // end scale
               true, // face up
               () => {
                 soundManager.play('card_play');
-                // Synchronize discard pile & hands
-                useGameStore.setState({
-                  playerCards: payload.hands,
-                  discardPile: payload.discardPile,
-                  drawPileCount: payload.drawPileCount
-                });
+                // Reconcile and replace the entire local state authoritatively
+                setGameState(payload);
               }
             );
           }
@@ -131,6 +139,8 @@ export const useSocket = () => {
           
           addedCards.forEach((card, idx) => {
             const delay = idx * 200; // stagger multiple draws
+            const isLast = idx === addedCards.length - 1;
+
             setTimeout(() => {
               if (animator) {
                 animator(
@@ -147,16 +157,21 @@ export const useSocket = () => {
                   seat === localSeat, // face up for local player only
                   () => {
                     soundManager.play('card_draw');
-                    // Add this specific card to storeplayerCards
-                    const currentHand = useGameStore.getState().playerCards[seat] || [];
-                    if (!currentHand.some(h => h.id === card.id)) {
-                      useGameStore.setState({
-                        playerCards: {
-                          ...useGameStore.getState().playerCards,
-                          [seat]: [...currentHand, card]
-                        },
-                        drawPileCount: payload.drawPileCount
-                      });
+                    
+                    if (isLast) {
+                      // Reconcile and replace the entire local state authoritatively on last card arrival
+                      setGameState(payload);
+                    } else {
+                      // Intermediate add to player hand for clean in-flight landing
+                      const currentHand = useGameStore.getState().playerCards[seat] || [];
+                      if (!currentHand.some(h => h.id === card.id)) {
+                        useGameStore.setState({
+                          playerCards: {
+                            ...useGameStore.getState().playerCards,
+                            [seat]: [...currentHand, card]
+                          }
+                        });
+                      }
                     }
                   }
                 );
@@ -193,13 +208,24 @@ export const useSocket = () => {
       console.log('SOCKET_CONNECTED', socketInstance.id);
       setConnectionStatus('connected');
       setError(null);
+
+      const state = useGameStore.getState();
+      if (state.room) {
+        addToast('Reconnected to game server!', 'success');
+      }
     });
 
     socketInstance.off('connect_error');
     socketInstance.on('connect_error', (err) => {
       console.error('[Socket] Connection error:', err);
       setConnectionStatus('error');
-      setError('Unable to connect to game server. Please ensure the backend is running.');
+
+      const state = useGameStore.getState();
+      if (state.room) {
+        addToast('Connection lost. Reconnecting...', 'error');
+      } else {
+        setError('Unable to connect to game server. Please ensure the backend is running.');
+      }
       setIsProcessing(false);
     });
 
@@ -217,12 +243,20 @@ export const useSocket = () => {
       setIsSpectator(!!isSpectator);
       setError(null);
       setIsProcessing(false);
+      addToast(isSpectator ? '⚡ Seated as Spectator' : `👋 Joined as ${player?.name}`, 'success');
     });
 
     socketInstance.off('lobby-updated');
     socketInstance.on('lobby-updated', (updatedRoom) => {
       console.log('[Socket] Lobby updated:', updatedRoom);
       setRoom(updatedRoom);
+      setIsProcessing(false);
+    });
+
+    socketInstance.off('game-started');
+    socketInstance.on('game-started', (room) => {
+      console.log('[Socket] Game started:', room.code);
+      addToast('Game has started! Good luck!', 'success');
       setIsProcessing(false);
     });
 
@@ -243,7 +277,13 @@ export const useSocket = () => {
     socketInstance.off('error');
     socketInstance.on('error', (err: { message: string }) => {
       console.error('[Socket] Error from server:', err.message);
-      setError(err.message);
+      const state = useGameStore.getState();
+      // Redirect room gameplay error messages as toasts instead of crashing screen
+      if (state.room) {
+        addToast(err.message, 'error');
+      } else {
+        setError(err.message);
+      }
       setIsProcessing(false);
     });
 
@@ -304,6 +344,7 @@ export const useSocket = () => {
       socketInstance.off('disconnect');
       socketInstance.off('joined-successfully');
       socketInstance.off('lobby-updated');
+      socketInstance.off('game-started');
       socketInstance.off('game-updated');
       socketInstance.off('game-ended');
       socketInstance.off('error');
@@ -314,7 +355,7 @@ export const useSocket = () => {
       socketInstance.off('spectator-left');
     };
     // stable setter dependencies
-  }, [setSocket, setRoom, setPlayer, setError, setConnectionStatus, setGameState, setIsProcessing, setIsSpectator, addReaction]);
+  }, [setSocket, setRoom, setPlayer, setError, setConnectionStatus, setGameState, setIsProcessing, setIsSpectator, addReaction, addToast]);
 
   const createRoom = (name: string) => {
     if (socket) {

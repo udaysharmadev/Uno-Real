@@ -82,15 +82,32 @@ export const CardAnimator: React.FC = () => {
               left: card.endX, 
               top: card.endY, 
               rotate: card.rotateEnd, 
-              scale: card.scaleEnd,
+              scale: [card.scaleStart, card.scaleStart * 1.25, card.scaleEnd],
               opacity: 1 
             }}
             exit={{ opacity: 0 }}
             transition={{ 
-              type: 'spring', 
-              stiffness: 120, 
-              damping: 16,
-              mass: 0.8
+              left: {
+                type: 'spring', 
+                stiffness: 155, 
+                damping: 14,
+                mass: 0.8
+              },
+              top: {
+                type: 'spring', 
+                stiffness: 155, 
+                damping: 14,
+                mass: 0.8
+              },
+              scale: {
+                duration: 0.5,
+                ease: 'easeInOut'
+              },
+              rotate: {
+                type: 'spring',
+                stiffness: 130,
+                damping: 15
+              }
             }}
             onAnimationComplete={() => {
               if (card.onArrival) card.onArrival();

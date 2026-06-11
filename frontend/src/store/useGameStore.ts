@@ -30,6 +30,10 @@ interface GameState {
   unoCalled: Record<string, boolean>; // socketId -> boolean
   isSpectator: boolean;
   reactions: Array<{ id: string; name: string; seatNumber: number | null; emoji: string; isSpectator: boolean }>;
+  toasts: Array<{ id: string; message: string; type: 'success' | 'error' | 'info' }>;
+  
+  addToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  removeToast: (id: string) => void;
   
   setSocket: (socket: Socket | null) => void;
   setIsProcessing: (val: boolean) => void;
@@ -98,6 +102,19 @@ export const useGameStore = create<GameState>((set) => ({
   unoCalled: {},
   isSpectator: false,
   reactions: [],
+  toasts: [],
+
+  addToast: (message, type = 'info') => set((state) => {
+    const id = `toast-${Math.random().toString(36).substring(2, 9)}`;
+    // Auto-remove toast after 3.5 seconds
+    setTimeout(() => {
+      useGameStore.getState().removeToast(id);
+    }, 3500);
+    return { toasts: [...state.toasts, { id, message, type }] };
+  }),
+  removeToast: (id) => set((state) => ({
+    toasts: state.toasts.filter((t) => t.id !== id),
+  })),
 
   setSocket: (socket) => set({ socket }),
   setIsProcessing: (isProcessing) => set({ isProcessing }),
@@ -147,6 +164,7 @@ export const useGameStore = create<GameState>((set) => ({
     isProcessing: false,
     isSpectator: false,
     reactions: [],
+    toasts: [],
     currentPlayerId: null,
     currentPlayerSeat: null,
     wildColor: null,
@@ -185,6 +203,7 @@ export const useGameStore = create<GameState>((set) => ({
     isProcessing: false,
     isSpectator: false,
     reactions: [],
+    toasts: [],
     currentPlayerId: null,
     currentPlayerSeat: null,
     direction: 'clockwise',
