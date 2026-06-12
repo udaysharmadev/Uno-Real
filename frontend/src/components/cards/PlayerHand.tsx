@@ -33,20 +33,18 @@ export const PlayerHand: React.FC = () => {
   const getFanStyles = (index: number) => {
     if (N <= 1) return { rot: 0, tx: 0, ty: 0, scale: 1.0 };
     
-    // Geometric circle calculation: Sit cards on a circle of radius 220px
+    // Flat, natural arc of cards held in hand
     const offset = index - (N - 1) / 2;
-    
-    // Contract spacing angle as N increases to keep cards within view bounds
-    const angleStep = Math.min(6.5, 36 / (N - 1));
+    const angleStep = Math.min(6.0, 42 / (N - 1));
     const rot = offset * angleStep;
     
-    const radius = 220; 
+    const radius = 340; 
     const rad = (rot * Math.PI) / 180;
     const tx = Math.sin(rad) * radius;
     const ty = (1 - Math.cos(rad)) * radius;
 
-    // Responsive scaling: Shrink card sizes dynamically for very large hands (e.g. 7+ cards)
-    const scale = N > 7 ? Math.max(0.68, 1.0 - (N - 7) * 0.035) : 1.0;
+    // Responsive scaling: Shrink card sizes dynamically for very large hands
+    const scale = N > 7 ? Math.max(0.62, 1.0 - (N - 7) * 0.04) : 1.0;
 
     return { rot, tx, ty, scale };
   };
@@ -67,11 +65,11 @@ export const PlayerHand: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-end pb-1 relative select-none">
+    <div className="w-full h-full flex flex-col items-center justify-end pb-0 relative select-none">
       
       {/* Cards Fan Container with 3D Perspective */}
       <div 
-        className="flex justify-center items-end relative h-36 w-full max-w-2xl px-12 mt-1"
+        className="flex justify-center items-end relative h-40 w-full max-w-3xl px-12 mt-2"
         style={{ perspective: '1000px' }}
       >
         <AnimatePresence>
@@ -94,6 +92,7 @@ export const PlayerHand: React.FC = () => {
                   x: [tx, tx - 5, tx + 5, tx - 5, tx + 5, tx], // Horizontal shake sequence
                   y: ty,
                   rotate: rot,
+                  rotateX: 18,
                   scale: scale,
                   zIndex: 50,
                 } : { 
@@ -101,6 +100,7 @@ export const PlayerHand: React.FC = () => {
                   y: ty, 
                   x: tx,
                   rotate: rot, 
+                  rotateX: 18,
                   scale: scale, 
                   zIndex: idx + 10
                 }}
@@ -110,15 +110,15 @@ export const PlayerHand: React.FC = () => {
                   ease: 'easeInOut'
                 } : undefined}
                 whileHover={isProcessing || !isCardValid ? {} : { 
-                  y: -24, // Deeper hover lift (safe bound)
-                  rotateX: 12, // 3D perspective tilt X
-                  rotateY: -8, // 3D perspective tilt Y
-                  scale: scale * 1.12, 
+                  y: -32, // Deeper hover lift (safe bound)
+                  rotateX: 6, // Tilt slightly more forward on hover
+                  rotateY: -6, // Tilt Y
+                  scale: scale * 1.15, 
                   zIndex: 100,
                   transition: { type: 'spring', stiffness: 450, damping: 20 }
                 }}
                 onClick={() => handleCardClick(card, isCardValid)}
-                className={`absolute w-[95px] h-[142px] rounded-2xl p-2.5 flex flex-col justify-between items-center transition-colors duration-300 border origin-bottom shrink-0 ${
+                className={`absolute w-[110px] h-[165px] rounded-2xl p-2.5 flex flex-col justify-between items-center transition-colors duration-300 border origin-bottom shrink-0 ${
                   isProcessing 
                     ? 'cursor-not-allowed' 
                     : isCardValid 

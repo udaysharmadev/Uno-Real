@@ -56,7 +56,10 @@ export const TableSurface: React.FC = () => {
   const activeBorderColor = getActiveBorderColor();
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+    <div 
+      className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
+      style={{ perspective: '1200px' }}
+    >
       <style>{`
         @keyframes felt-breathing {
           0%, 100% { opacity: 0.35; }
@@ -69,22 +72,24 @@ export const TableSurface: React.FC = () => {
       
       {/* 1. Wood Side Wall Thickness (Bezel Shadow Layer for 3D depth) */}
       <div 
-        className="absolute w-[72%] h-[54%] rounded-[50%] bg-[#150904] translate-y-[10px] pointer-events-none"
+        className="absolute w-[82%] h-[68%] rounded-[50%] bg-[#150904] pointer-events-none"
         style={{
+          transform: 'rotateX(58deg) translateY(54px) scale(1.02)',
           boxShadow: `
-            0 45px 95px rgba(0,0,0,0.98),
-            0 10px 20px rgba(0,0,0,0.8)
+            0 65px 125px rgba(0,0,0,0.99),
+            0 20px 35px rgba(0,0,0,0.9)
           `
         }}
       />
 
       {/* 2. Main Large Wood Bezel Oval Table */}
       <div 
-        className="w-[72%] h-[54%] rounded-[50%] bg-gradient-to-br from-[#3e1e0f] via-[#1a0b04] to-[#2e150a] flex items-center justify-center relative"
+        className="w-[82%] h-[68%] rounded-[50%] bg-gradient-to-br from-[#3e1e0f] via-[#1a0b04] to-[#2e150a] flex items-center justify-center relative"
         style={{
+          transform: 'rotateX(58deg) translateY(40px) scale(1.02)',
           boxShadow: `
-            inset 0 6px 16px rgba(255,255,255,0.08),
-            0 2px 4px rgba(255,255,255,0.2)
+            inset 0 10px 24px rgba(255,255,255,0.06),
+            0 4px 8px rgba(255,255,255,0.12)
           `,
         }}
       >

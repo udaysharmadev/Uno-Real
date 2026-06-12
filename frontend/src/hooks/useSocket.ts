@@ -98,6 +98,9 @@ export const useSocket = () => {
           }
 
           const coords = getCoordsForSeat(playerWhoPlayedSeat);
+          const isLocalPlay = playerWhoPlayedSeat === localSeat;
+          const startX = isLocalPlay ? '50%' : coords.left;
+          const startY = isLocalPlay ? '92%' : coords.top;
           const animator = (window as any).triggerHtmlCardAnimation;
           
           if (animator) {
@@ -105,8 +108,8 @@ export const useSocket = () => {
             animator(
               playedCard.color,
               playedCard.value,
-              coords.left,
-              coords.top,
+              startX,
+              startY,
               '59%', // Discard Pile X
               '50%', // Discard Pile Y
               coords.rotation,
@@ -143,13 +146,15 @@ export const useSocket = () => {
 
             setTimeout(() => {
               if (animator) {
+                const endX = seat === localSeat ? '50%' : coords.left;
+                const endY = seat === localSeat ? '92%' : coords.top;
                 animator(
                   seat === localSeat ? card.color : 'wild',
                   seat === localSeat ? card.value : 'wild',
                   '41%', // Draw Pile X
                   '50%', // Draw Pile Y
-                  coords.left,
-                  coords.top,
+                  endX,
+                  endY,
                   0,
                   coords.rotation,
                   0.72, // start scale

@@ -155,12 +155,12 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
           // Occupied Seat UI: Premium Avatar + Name Capsule
           <div className="flex flex-col items-center relative z-10">
             {/* Anchoring floor shadow */}
-            <div className="absolute w-[44px] h-[6px] rounded-full bg-black/60 blur-[2.5px] translate-y-[21px] z-0 pointer-events-none" />
+            <div className="absolute w-[52px] h-[8px] rounded-full bg-black/75 blur-[3px] translate-y-[24px] z-0 pointer-events-none" />
 
             {/* Profile Avatar inside relative wrapper with Chair silhouette */}
             <div className="relative flex items-center justify-center">
               {/* Chair silhouette backrest panel */}
-              <div className="absolute w-[46px] h-[46px] rounded-full bg-[#181d28] border border-[#2d3748] -z-10 translate-y-[-2px] shadow-[0_4px_8px_rgba(0,0,0,0.5)] opacity-85 pointer-events-none" />
+              <div className="absolute w-[56px] h-[58px] rounded-t-3xl bg-[#111622] border-t border-l border-r border-[#242c3d] -z-10 translate-y-[-6px] shadow-[0_6px_12px_rgba(0,0,0,0.6)] opacity-95 pointer-events-none" />
               
               <motion.div
                 whileHover={{ scale: 1.08 }}

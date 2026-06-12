@@ -100,17 +100,24 @@ export const TableScene: React.FC = () => {
     <div 
       className="w-full h-full relative overflow-hidden flex items-center justify-center"
       style={{
-        background: 'radial-gradient(circle at 50% -20%, #451a03 0%, #120501 50%, #030000 100%)'
+        background: 'radial-gradient(circle at 50% -20%, #451a03 0%, #120501 50%, #030000 100%)',
+        perspective: '1200px'
       }}
     >
+      {/* Warm Hanging Lamp Cord & Shade */}
+      <div 
+        className="absolute top-0 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none opacity-85"
+        style={{ zIndex: 15 }}
+      >
+        <div className="w-[1.5px] h-24 bg-gradient-to-b from-black to-[#291307]" />
+        <div className="w-20 h-10 bg-gradient-to-b from-[#1b0a03] to-[#2e1307] rounded-t-full border-b border-amber-500/20 shadow-[0_4px_12px_rgba(0,0,0,0.6)] relative flex items-end justify-center">
+          {/* Bulb Glow */}
+          <div className="w-5 h-5 rounded-full bg-yellow-100 blur-[2px] -mb-1.5 shadow-[0_0_20px_rgba(253,230,138,0.95)]" />
+        </div>
+      </div>
+
       {/* HTML Ambient Lamp Spotlight Blur */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[70%] h-[35%] bg-amber-500/5 blur-[95px] rounded-full pointer-events-none z-0" />
-
-      {/* Top opponent chair backrest silhouette */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[40%] h-[8%] bg-black/45 rounded-b-[80px] blur-[20px] pointer-events-none z-10" />
-
-      {/* Bottom chair backrest silhouette */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[60%] h-[12%] bg-black/40 rounded-t-[100px] blur-[25px] pointer-events-none z-10" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[70%] h-[40%] bg-amber-500/10 blur-[110px] rounded-full pointer-events-none z-0 animate-pulse" />
 
       {/* Dynamic Keyframe Shakes Injector */}
       <style>{`
@@ -141,12 +148,34 @@ export const TableScene: React.FC = () => {
         {/* The Oval Felt Table Surface */}
         <TableSurface />
 
+        {/* Elegant stenciled felt Room Code printed directly on table */}
+        <div 
+          className="absolute left-1/2 top-[63%] -translate-x-1/2 text-[9.5px] font-mono tracking-widest font-black uppercase text-white/10 select-all pointer-events-auto cursor-copy"
+          style={{
+            transform: 'rotateX(58deg)',
+          }}
+          title="Copy Room Code"
+          onClick={() => {
+            if (room?.code) {
+              navigator.clipboard.writeText(room.code.toUpperCase());
+              (window as any).dispatchEvent(new CustomEvent('toast-request', { detail: { message: 'Lobby code copied to clipboard!', type: 'success' } }));
+            }
+          }}
+        >
+          Lobby: {room?.code}
+        </div>
+
         {/* =================================================================== */}
         {/* CENTER GAME AREA (Draw Pile, Discard Pile, Play Area)               */}
         {/* =================================================================== */}
         
         {/* Central Play Area Target zone */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[110px] h-[164px] rounded-2xl border border-dashed border-blue-500/25 bg-blue-950/5 flex flex-col items-center justify-center pointer-events-none scale-[0.72] z-10">
+        <div 
+          className="absolute left-1/2 top-[50%] -translate-x-1/2 -translate-y-1/2 w-[110px] h-[164px] rounded-2xl border border-dashed border-blue-500/20 bg-blue-950/5 flex flex-col items-center justify-center pointer-events-none scale-[0.72] z-10"
+          style={{
+            transform: 'translate(-50%, -50%) rotateX(54deg)',
+          }}
+        >
           <span className="text-[9px] font-black uppercase tracking-widest text-blue-400/40">
             Play Area
           </span>
@@ -168,7 +197,7 @@ export const TableScene: React.FC = () => {
                 key={`draw-${idx}`}
                 className="absolute"
                 style={{
-                  transform: `translate(calc(-50% + ${idx * 2}px), calc(-50% - ${idx * 2}px))`,
+                  transform: `translate(calc(-50% + ${idx * 2}px), calc(-50% - ${idx * 2}px)) rotateX(54deg)`,
                   zIndex: idx,
                 }}
               >
@@ -183,7 +212,7 @@ export const TableScene: React.FC = () => {
                   : 'bg-slate-950/90 border-slate-800 text-red-400'
               }`}
               style={{
-                transform: 'translate(-50%, 62px)',
+                transform: 'translate(-50%, 54px)',
                 left: '0px'
               }}
             >
@@ -205,6 +234,7 @@ export const TableScene: React.FC = () => {
             style={{
               borderColor: impactColor,
               boxShadow: `0 0 25px ${impactColor}`,
+              transform: 'translate(-50%, -50%) rotateX(54deg)',
             }}
           />
         )}
@@ -213,7 +243,12 @@ export const TableScene: React.FC = () => {
         <div className="absolute left-[59%] top-[50%] -translate-x-1/2 -translate-y-1/2 z-10 scale-[0.72]">
           {discardPile.length === 0 ? (
             // Hollow placeholder if discard pile is empty
-            <div className="w-[124px] h-[184px] rounded-2xl border border-dashed border-slate-800/50 flex items-center justify-center -translate-x-1/2 -translate-y-1/2">
+            <div 
+              className="w-[124px] h-[184px] rounded-2xl border border-dashed border-slate-800/50 flex items-center justify-center -translate-x-1/2 -translate-y-1/2"
+              style={{
+                transform: 'translate(-50%, -50%) rotateX(54deg)',
+              }}
+            >
               <span className="text-[8px] font-bold text-slate-700 uppercase tracking-widest">Empty</span>
             </div>
           ) : (
@@ -224,7 +259,7 @@ export const TableScene: React.FC = () => {
                   key={card.id}
                   className="absolute"
                   style={{
-                    transform: `translate(calc(-50% + ${discardOffsetX(idx)}px), calc(-50% + ${discardOffsetY(idx)}px)) rotate(${discardRotation(idx)}deg)`,
+                    transform: `translate(calc(-50% + ${discardOffsetX(idx)}px), calc(-50% + ${discardOffsetY(idx)}px)) rotateX(54deg) rotateZ(${discardRotation(idx)}deg)`,
                     zIndex: idx + 10,
                   }}
                 >
@@ -253,6 +288,9 @@ export const TableScene: React.FC = () => {
               const cardCount = playerCards[occupant.seatNumber]?.length || 0;
               const isActiveTurn = occupant.id === currentPlayerId;
 
+              // First-person: Omit rendering the local player's seat bubble on the table
+              if (visualSlotIndex === 0) return null;
+
               return (
                 <PlayerSeat
                   key={occupant.id}
@@ -274,6 +312,10 @@ export const TableScene: React.FC = () => {
               const isLocal = occupant ? occupant.id === player?.id : false;
               const cardCount = playerCards[seatNumber]?.length || 0;
               const isActiveTurn = occupant ? occupant.id === currentPlayerId : false;
+
+              // Determine visual slot index to see if it is local player
+              const visualSlotIndex = (seatNumber - localSeatNumber + 6) % 6;
+              if (visualSlotIndex === 0) return null;
 
               return (
                 <PlayerSeat

@@ -14,34 +14,34 @@ const LAYOUTS: Record<number, SeatCoords[]> = {
     { left: '50%', top: '85%', rotation: 0 }
   ],
   2: [
-    { left: '50%', top: '88%', rotation: 0 },    // Bottom Center
-    { left: '50%', top: '15%', rotation: 0 }     // Top Center
+    { left: '50%', top: '85%', rotation: 0 },    // Bottom Center (Local)
+    { left: '50%', top: '25%', rotation: 0 }     // Top Center (Opponent)
   ],
   3: [
-    { left: '50%', top: '88%', rotation: 0 },    // Bottom Center
-    { left: '82%', top: '25%', rotation: -12 },  // Top Right
-    { left: '18%', top: '25%', rotation: 12 }    // Top Left
+    { left: '50%', top: '85%', rotation: 0 },    // Bottom Center (Local)
+    { left: '78%', top: '30%', rotation: 0 },    // Top Right (Opponent)
+    { left: '22%', top: '30%', rotation: 0 }     // Top Left (Opponent)
   ],
   4: [
-    { left: '50%', top: '88%', rotation: 0 },    // Bottom Center
-    { left: '85%', top: '50%', rotation: -12 },  // Right Center
-    { left: '50%', top: '15%', rotation: 0 },    // Top Center
-    { left: '15%', top: '50%', rotation: 12 }    // Left Center
+    { left: '50%', top: '85%', rotation: 0 },    // Bottom Center (Local)
+    { left: '82%', top: '48%', rotation: 0 },    // Right Center (Opponent)
+    { left: '50%', top: '22%', rotation: 0 },    // Top Center (Opponent)
+    { left: '18%', top: '48%', rotation: 0 }     // Left Center (Opponent)
   ],
   5: [
-    { left: '50%', top: '88%', rotation: 0 },    // Bottom Center
-    { left: '85%', top: '65%', rotation: -12 },  // Bottom Right
-    { left: '78%', top: '25%', rotation: -12 },  // Top Right
-    { left: '22%', top: '25%', rotation: 12 },   // Top Left
-    { left: '15%', top: '65%', rotation: 12 }    // Bottom Left
+    { left: '50%', top: '85%', rotation: 0 },    // Bottom Center (Local)
+    { left: '82%', top: '56%', rotation: 0 },    // Bottom Right (Opponent)
+    { left: '75%', top: '28%', rotation: 0 },    // Top Right (Opponent)
+    { left: '25%', top: '28%', rotation: 0 },    // Top Left (Opponent)
+    { left: '18%', top: '56%', rotation: 0 }     // Bottom Left (Opponent)
   ],
   6: [
-    { left: '50%', top: '88%', rotation: 0 },    // Bottom Center
-    { left: '85%', top: '68%', rotation: -12 },  // Bottom Right
-    { left: '85%', top: '32%', rotation: 12 },   // Top Right
-    { left: '50%', top: '12%', rotation: 0 },    // Top Center
-    { left: '15%', top: '32%', rotation: -12 },  // Top Left
-    { left: '15%', top: '68%', rotation: 12 }    // Bottom Left
+    { left: '50%', top: '85%', rotation: 0 },    // Bottom Center (Local)
+    { left: '82%', top: '58%', rotation: 0 },    // Bottom Right (Opponent)
+    { left: '80%', top: '32%', rotation: 0 },    // Top Right (Opponent)
+    { left: '50%', top: '20%', rotation: 0 },    // Top Center (Opponent)
+    { left: '20%', top: '32%', rotation: 0 },    // Top Left (Opponent)
+    { left: '18%', top: '58%', rotation: 0 }     // Bottom Left (Opponent)
   ]
 };
 

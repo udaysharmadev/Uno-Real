@@ -457,9 +457,10 @@ export default function LobbyPage() {
                 toggleMute();
                 addToast(!isMuted ? 'Sound Muted' : 'Sound Enabled', 'info');
               }}
-              className="glass-panel rounded-full px-3 py-1 text-[9px] font-extrabold text-slate-300 hover:text-white transition-all shadow-md opacity-90 flex items-center gap-1.5 border border-slate-800"
+              className="glass-panel rounded-full p-2 text-slate-300 hover:text-white transition-all shadow-md opacity-90 flex items-center justify-center border border-slate-800 w-8 h-8 shrink-0"
+              title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
             >
-              {isMuted ? '🔇 Muted' : '🔊 Sound'}
+              <span className="text-[12px]">{isMuted ? '🔇' : '🔊'}</span>
             </motion.button>
 
             {/* Premium Theme Switcher Toolbar Button */}
@@ -473,27 +474,22 @@ export default function LobbyPage() {
                 setTableTheme(themes[nextIdx]);
                 addToast(`Table theme: ${themes[nextIdx].replace('-', ' ').toUpperCase()}`, 'info');
               }}
-              className="glass-panel rounded-full px-3 py-1 text-[9px] font-extrabold text-slate-300 hover:text-white transition-all shadow-md opacity-90 flex items-center gap-1.5 border border-slate-800"
+              className="glass-panel rounded-full p-2 text-slate-300 hover:text-white transition-all shadow-md opacity-90 flex items-center justify-center border border-slate-800 w-8 h-8 shrink-0"
+              title="Change Table Style"
             >
-              🎨 Style: <span className="text-amber-500 uppercase font-black">{tableTheme?.replace('-', ' ')}</span>
+              <span className="text-[12px]">🎨</span>
             </motion.button>
 
-            {/* Minimalist Room Code Pill */}
-            <div className="glass-panel rounded-full px-3.5 py-1 flex items-center gap-2 shadow-md opacity-90 text-[10px]">
-              <span className="font-bold text-slate-400">Code:</span>
-              <span className="font-mono font-bold tracking-widest text-blue-400 select-all uppercase">
-                {roomId}
-              </span>
-              <motion.button
-                whileHover={{ scale: 1.18 }}
-                whileTap={{ scale: 0.85 }}
-                onClick={handleCopyCode}
-                className="text-slate-400 hover:text-white transition-all ml-0.5"
-                title="Copy Code"
-              >
-                {copied ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
-              </motion.button>
-            </div>
+            {/* Minimalist Room Code Copy Circle */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleCopyCode}
+              className="glass-panel rounded-full p-2 text-slate-300 hover:text-white transition-all shadow-md opacity-90 flex items-center justify-center border border-slate-800 w-8 h-8 shrink-0"
+              title="Copy Room Code"
+            >
+              {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+            </motion.button>
 
             {/* Leave Table Button */}
             <motion.button
@@ -503,9 +499,10 @@ export default function LobbyPage() {
                 leaveRoom();
                 router.push('/');
               }}
-              className="glass-panel rounded-lg px-2.5 py-1 hover:bg-red-950/20 border border-red-500/10 hover:border-red-500/30 text-red-400 hover:text-red-300 text-[10px] font-bold uppercase tracking-wider transition-all shadow-md flex items-center gap-1 opacity-90"
+              className="glass-panel rounded-full p-2 hover:bg-red-950/20 border border-red-500/10 hover:border-red-500/30 text-red-400 hover:text-red-300 transition-all shadow-md flex items-center justify-center opacity-90 w-8 h-8 shrink-0"
+              title="Exit Table"
             >
-              <LogOut size={10} /> Exit
+              <LogOut size={12} />
             </motion.button>
           </div>
         </header>
@@ -513,7 +510,7 @@ export default function LobbyPage() {
 
 
         {/* HUD: Bottom Table Actions */}
-        <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center z-20 pointer-events-none">
+        <div className="absolute bottom-1.5 left-0 right-0 flex flex-col items-center z-20 pointer-events-none">
           <div className="pointer-events-auto">
             {/* Display state alert banners */}
             <div className="flex flex-col items-center gap-1.5">
@@ -528,7 +525,7 @@ export default function LobbyPage() {
                         setIsProcessing(true);
                         startGame();
                       }}
-                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:opacity-40 text-white font-bold py-2.5 px-6 rounded-full shadow-md transition-all flex items-center gap-1.5 text-xs uppercase tracking-wider border border-emerald-400/20 disabled:border-transparent disabled:text-slate-500"
+                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:opacity-40 text-white font-bold py-2 px-5 rounded-full shadow-md transition-all flex items-center gap-1 text-[10px] uppercase tracking-wider border border-emerald-400/20 disabled:border-transparent disabled:text-slate-500"
                     >
                       Start Game
                     </motion.button>
@@ -539,18 +536,18 @@ export default function LobbyPage() {
                     )}
                   </div>
                 ) : (
-                  <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3 py-1 rounded-full shadow-md">
-                    Waiting for host to start game...
+                  <span className="text-[8px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3 py-1 rounded-full shadow-md">
+                    Waiting for host...
                   </span>
                 )
               ) : gameStatus === 'playing' ? (
                 isMyTurn ? (
-                  <span className="text-xs bg-emerald-950/90 border border-emerald-500/40 text-emerald-400 px-4 py-2 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.35)] font-black uppercase tracking-widest animate-pulse">
+                  <span className="text-[10px] bg-emerald-950/90 border border-emerald-500/40 text-emerald-400 px-4 py-1.5 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.25)] font-black uppercase tracking-widest animate-pulse">
                     🟢 Your Turn - Play Card or Draw
                   </span>
                 ) : (
-                  <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3.5 py-1.5 rounded-full shadow-md">
-                    Waiting for Seat {currentPlayerSeat}'s turn...
+                  <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3 py-1 rounded-full shadow-md">
+                    Waiting for Seat {currentPlayerSeat}...
                   </span>
                 )
               ) : gameStatus === 'awaiting_color_selection' ? (
