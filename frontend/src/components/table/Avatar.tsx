@@ -9,6 +9,7 @@ export interface AvatarConfig {
   videoStream?: MediaStream;
   isSpeaking?: boolean;
   reactionEmoji?: string;
+  micStatus?: 'muted' | 'unmuted' | 'active';
 }
 
 interface AvatarProps {
@@ -90,7 +91,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   }[size];
 
   // Speaking indicator pulse glow
-  const isSpeaking = config?.isSpeaking || false;
+  const isSpeaking = config?.isSpeaking || config?.micStatus === 'active' || false;
   const speakRing = isSpeaking
     ? 'ring-4 ring-green-400 animate-pulse shadow-[0_0_15px_rgba(74,222,128,0.8)]'
     : isLocal
@@ -98,6 +99,35 @@ export const Avatar: React.FC<AvatarProps> = ({
       : isHost
         ? 'ring-2 ring-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.4)]'
         : 'ring-2 ring-indigo-500/80 shadow-[0_0_10px_rgba(99,102,241,0.3)]';
+
+  // Stylized Premium Microphone Icon
+  const MicIcon = ({ status }: { status: 'muted' | 'unmuted' | 'active' }) => {
+    const color = {
+      muted: '#ef4444',
+      unmuted: '#94a3b8',
+      active: '#22c55e',
+    }[status];
+    
+    return (
+      <div 
+        className={`absolute bottom-[-2px] right-[-2px] rounded-full p-0.5 border shadow-md flex items-center justify-center transition-all ${
+          status === 'active' 
+            ? 'bg-green-950 border-green-500 animate-pulse scale-105 shadow-[0_0_8px_rgba(34,197,94,0.6)]' 
+            : status === 'muted' 
+              ? 'bg-red-950 border-red-800' 
+              : 'bg-slate-900 border-slate-800'
+        }`}
+        style={{ width: '16px', height: '16px', zIndex: 30 }}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" fill={status === 'active' ? color : 'none'} />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" x2="12" y1="19" y2="22" />
+          {status === 'muted' && <line x1="4" x2="20" y1="4" y2="20" stroke="#ef4444" strokeWidth="3" />}
+        </svg>
+      </div>
+    );
+  };
 
   return (
     <div 
@@ -108,7 +138,7 @@ export const Avatar: React.FC<AvatarProps> = ({
       }}
     >
       <div 
-        className="flex flex-col items-center justify-end w-[60px] h-[68px] origin-bottom"
+        className="flex flex-col items-center justify-end w-[60px] h-[68px] origin-bottom relative"
         style={{ transform: `scale(${scaleFactor})` }}
       >
         {/* Render profile image or video stream if configured for future media integrations */}
@@ -176,6 +206,11 @@ export const Avatar: React.FC<AvatarProps> = ({
           <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-yellow-400 border border-amber-300/40 text-slate-950 rounded-full p-0.5 shadow-md z-30 scale-90 animate-bounce">
             <Crown size={9} className="fill-current" />
           </div>
+        )}
+        
+        {/* 5. Voice Chat Status Indicator Overlay (micStatus) */}
+        {config?.micStatus && (
+          <MicIcon status={config.micStatus} />
         )}
         
         {/* Animated speaking bubble/visual cue future overlay */}

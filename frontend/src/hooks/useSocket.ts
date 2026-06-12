@@ -51,166 +51,29 @@ export const useSocket = () => {
       const numPlayers = playersList.length || 2;
       const localIndex = state.room ? playersList.findIndex(p => p.id === state.player?.id) : -1;
 
-      // Helper to retrieve screen percentage coordinates of any seat
-      const getCoordsForSeat = (seatNo: number) => {
-        const playerIndex = playersList.findIndex(p => p.seatNumber === seatNo);
-        if (playerIndex !== -1 && localIndex !== -1) {
-          const visualSlotIndex = (playerIndex - localIndex + numPlayers) % numPlayers;
-          return getSeatCoords(visualSlotIndex, 0, numPlayers);
-        }
-        return getSeatCoords(seatNo, localSeat, 6);
-      };
-
-      // If initial state load, merge immediately to prevent massive simultaneous fly-in overlaps
-      const isInitialLoad = state.discardPile.length === 0;
-
-      if (isInitialLoad) {
-        setGameState(payload);
-        return;
-      }
-
-      // Check Discard Pile change (Card Played)
+      // Play sound effects based on what changed
       const oldDiscard: CardItem[] = state.discardPile;
       const newDiscard: CardItem[] = payload.discardPile;
-      let cardPlayAnimated = false;
-
+      
       if (newDiscard.length > oldDiscard.length) {
-        const playedCard: CardItem = newDiscard[newDiscard.length - 1];
-        
-        // Find which player's card count decreased to see who threw it
-        let playerWhoPlayedSeat = -1;
-        for (const player of playersList) {
-          const seat = player.seatNumber;
-          const oldCount = state.playerCards[seat]?.length || 0;
-          const newCount = payload.hands[seat]?.length || 0;
-          if (newCount < oldCount) {
-            playerWhoPlayedSeat = seat;
-            break;
-          }
-        }
-
-        // Animate flight for the player who played (both local player and opponents)
-        if (playerWhoPlayedSeat !== -1) {
-          // If local player, remove the card from the client-side store hand immediately 
-          // at the start of the flight to avoid rendering a duplicate card
-          if (playerWhoPlayedSeat === localSeat) {
-            const currentHand = state.playerCards[localSeat] || [];
-            useGameStore.setState({
-              playerCards: {
-                ...state.playerCards,
-                [localSeat]: currentHand.filter(c => c.id !== playedCard.id)
-              }
-            });
-          }
-
-          const coords = getCoordsForSeat(playerWhoPlayedSeat);
-          const isLocalPlay = playerWhoPlayedSeat === localSeat;
-          const startX = isLocalPlay ? '50%' : coords.left;
-          const startY = isLocalPlay ? '92%' : coords.top;
-          const animator = (window as any).triggerHtmlCardAnimation;
-          
-          if (animator) {
-            cardPlayAnimated = true;
-            animator(
-              playedCard.color,
-              playedCard.value,
-              startX,
-              startY,
-              '59%', // Discard Pile X
-              '50%', // Discard Pile Y
-              coords.rotation,
-              0, // end rotation
-              playerWhoPlayedSeat === localSeat ? 1.0 : 0.6, // start scale
-              0.72, // end scale
-              true, // face up
-              () => {
-                soundManager.play('card_play');
-                // Reconcile and replace the entire local state authoritatively
-                setGameState(payload);
-              }
-            );
-          }
-        }
+        soundManager.play('card_play');
       }
 
-      // Check Hands changes (Cards Drawn)
-      let cardsDrawnAnimated = false;
       for (const player of playersList) {
         const seat = player.seatNumber;
         const oldHand: CardItem[] = state.playerCards[seat] || [];
         const newHand: CardItem[] = payload.hands[seat] || [];
         
         if (newHand.length > oldHand.length) {
-          cardsDrawnAnimated = true;
-          const addedCards = newHand.filter((nc: CardItem) => !oldHand.some((cc: CardItem) => cc.id === nc.id));
-          const coords = getCoordsForSeat(seat);
-          const animator = (window as any).triggerHtmlCardAnimation;
-          
-          addedCards.forEach((card, idx) => {
-            const delay = idx * 200; // stagger multiple draws
-            const isLast = idx === addedCards.length - 1;
-
-            setTimeout(() => {
-              if (animator) {
-                const endX = seat === localSeat ? '50%' : coords.left;
-                const endY = seat === localSeat ? '92%' : coords.top;
-                animator(
-                  seat === localSeat ? card.color : 'wild',
-                  seat === localSeat ? card.value : 'wild',
-                  '41%', // Draw Pile X
-                  '50%', // Draw Pile Y
-                  endX,
-                  endY,
-                  0,
-                  coords.rotation,
-                  0.72, // start scale
-                  seat === localSeat ? 1.0 : 0.6, // end scale
-                  seat === localSeat, // face up for local player only
-                  () => {
-                    soundManager.play('card_draw');
-                    
-                    if (isLast) {
-                      // Reconcile and replace the entire local state authoritatively on last card arrival
-                      setGameState(payload);
-                    } else {
-                      // Intermediate add to player hand for clean in-flight landing
-                      const currentHand = useGameStore.getState().playerCards[seat] || [];
-                      if (!currentHand.some(h => h.id === card.id)) {
-                        useGameStore.setState({
-                          playerCards: {
-                            ...useGameStore.getState().playerCards,
-                            [seat]: [...currentHand, card]
-                          }
-                        });
-                      }
-                    }
-                  }
-                );
-              } else {
-                setGameState(payload);
-              }
-            }, delay);
-          });
+          // Play sound if local player or others draw
+          soundManager.play('card_draw');
+          break; // One sound is enough even if multiple players draw
         }
       }
 
-      // If no card animation was triggered, update immediately
-      if (!cardPlayAnimated && !cardsDrawnAnimated) {
-        setGameState(payload);
-      } else {
-        // Sync non-card states immediately
-        useGameStore.setState({
-          currentPlayerId: payload.currentPlayerId,
-          currentPlayerSeat: payload.currentPlayerSeat,
-          direction: payload.direction,
-          wildColor: payload.wildColor,
-          gameStatus: payload.gameStatus,
-          colorChooserId: payload.colorChooserId,
-          winnerId: payload.winnerId,
-          winnerName: payload.winnerName,
-          unoCalled: payload.unoCalled
-        });
-      }
+      // Synchronously and authoritatively replace the local state
+      // This completely eliminates any race conditions caused by legacy async animation delays
+      setGameState(payload);
     };
 
     // 2. Attach listeners safely (cleaning up existing ones first to prevent duplicates)
@@ -221,8 +84,10 @@ export const useSocket = () => {
       setError(null);
 
       const state = useGameStore.getState();
-      if (state.room) {
-        addToast('Reconnected to game server!', 'success');
+      if (state.room && state.player) {
+        addToast('Reconnected to game server! Resyncing...', 'info');
+        // CRITICAL: Rejoin the room so the backend updates our socket.id in room.players!
+        socketInstance.emit('join-room', { code: state.room.code, name: state.player.name });
       }
     });
 
@@ -275,6 +140,7 @@ export const useSocket = () => {
     socketInstance.off('game-updated');
     socketInstance.on('game-updated', (payload) => {
       console.log('[Socket] Game updated:', payload);
+      console.log(`[DEBUG TASK] Discard Pile: ${payload.discardPile.length}, Top Card: ${payload.discardPile[payload.discardPile.length - 1]?.id || 'None'}, Draw Pile: ${payload.drawPileCount}`);
       handleGameUpdateAnimation(payload);
       setIsProcessing(false);
     });

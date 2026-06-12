@@ -91,7 +91,7 @@ export const useGameStore = create<GameState>((set) => ({
   // Card defaults
   playerCards: { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] },
   discardPile: [],
-  drawPileCount: 52,
+  drawPileCount: 108,
   selectedCardId: null,
   isProcessing: false,
 

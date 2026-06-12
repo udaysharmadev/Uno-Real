@@ -5,7 +5,6 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useSocket } from '../../../hooks/useSocket';
 import { useGameStore } from '../../../store/useGameStore';
-import { PlayerHand } from '../../../components/cards/PlayerHand';
 import { ReactionsHandler } from '../../../components/social/ReactionsHandler';
 import { getSeatCoords } from '../../../utils/seating';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,8 +14,7 @@ import {
   LogOut, 
   ShieldAlert, 
   Loader2, 
-  ArrowUpCircle,
-  Layers
+  ArrowUpCircle
 } from 'lucide-react';
 import { getCardColorHex, getCardValueLabel, isValidMove } from '../../../lib/cards/cardEngine';
 
@@ -416,9 +414,9 @@ export default function LobbyPage() {
       </div>
 
       {/* =================================================================== */}
-      {/* TOP 70% - Virtual Card Table Viewport                               */}
+      {/* FULL SCREEN - Virtual Card Table Viewport                           */}
       {/* =================================================================== */}
-      <div className="w-full h-[70%] relative border-b border-slate-900/60">
+      <div className="w-full h-full relative">
         
         {/* Full-screen Table Scene */}
         <div className="w-full h-full absolute inset-0 z-0">
@@ -507,10 +505,8 @@ export default function LobbyPage() {
           </div>
         </header>
 
-
-
         {/* HUD: Bottom Table Actions */}
-        <div className="absolute bottom-1.5 left-0 right-0 flex flex-col items-center z-20 pointer-events-none">
+        <div className="absolute bottom-10 left-0 right-0 flex flex-col items-center z-20 pointer-events-none">
           <div className="pointer-events-auto">
             {/* Display state alert banners */}
             <div className="flex flex-col items-center gap-1.5">
@@ -555,6 +551,26 @@ export default function LobbyPage() {
                   Waiting for color selection...
                 </span>
               ) : null}
+
+              {/* Declare UNO Button (Moved from footer) */}
+              {(myHand.length === 2 || myHand.length === 1) && gameStatus === 'playing' && !isSpectator && (
+                <motion.button
+                  disabled={isProcessing}
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.92, y: 2 }}
+                  onClick={() => {
+                    setIsProcessing(true);
+                    callUno();
+                  }}
+                  className={`mt-2 px-3.5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all duration-300 border ${
+                    player && unoCalled[player.id]
+                      ? 'bg-gradient-to-r from-red-600 to-amber-600 border-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.75)] animate-pulse'
+                      : 'bg-slate-900 border-slate-700 hover:border-red-500 hover:text-red-400 text-slate-300 shadow-md shadow-red-500/10'
+                  }`}
+                >
+                  {player && unoCalled[player.id] ? '🔴 UNO Declared!' : '📣 Declare UNO!'}
+                </motion.button>
+              )}
             </div>
           </div>
         </div>
@@ -562,80 +578,11 @@ export default function LobbyPage() {
       </div>
 
       {/* =================================================================== */}
-      {/* BOTTOM 30% - Player Hand Area HUD Panel                             */}
-      {/* =================================================================== */}
-      <footer className="w-full h-[30%] bg-gradient-to-t from-slate-950 via-slate-950 to-slate-900/80 flex flex-col items-center justify-between p-3 relative border-t border-slate-800/40 z-10 shadow-2xl">
-        {/* Soft neon divider border */}
-        <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
-
-        {/* Hand Area Label */}
-        <div className="flex items-center gap-2 text-[10px] uppercase font-black tracking-widest text-slate-400 w-full justify-center relative">
-          <div className="flex items-center gap-2">
-            <Layers size={13} className="text-slate-500" />
-            <span>{isSpectator ? 'Spectating Panel' : `Your Hand (${myHand.length} Cards)`}</span>
-          </div>
-
-          {/* Declare UNO button with tap feedback and glows */}
-          {(myHand.length === 2 || myHand.length === 1) && gameStatus === 'playing' && !isSpectator && (
-            <motion.button
-              disabled={isProcessing}
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92, y: 2 }}
-              onClick={() => {
-                setIsProcessing(true);
-                callUno();
-              }}
-              className={`absolute right-4 px-3.5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all duration-300 border ${
-                player && unoCalled[player.id]
-                  ? 'bg-gradient-to-r from-red-600 to-amber-600 border-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.75)] animate-pulse'
-                  : 'bg-slate-900 border-slate-700 hover:border-red-500 hover:text-red-400 text-slate-300 shadow-md shadow-red-500/10'
-              }`}
-            >
-              {player && unoCalled[player.id] ? '🔴 UNO Declared!' : '📣 Declare UNO!'}
-            </motion.button>
-          )}
-        </div>
-
-        {/* Hand Area Visual Layout Fan */}
-        <div className="flex-1 w-full max-w-3xl flex items-center justify-center gap-4 mt-1">
-          {isSpectator ? (
-            <div className="w-full h-[150px] rounded-2xl border border-dashed border-slate-800/60 bg-slate-950/40 flex flex-col items-center justify-center p-4">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                Spectating match in progress...
-              </span>
-            </div>
-          ) : myHand.length > 0 ? (
-            <PlayerHand />
-          ) : (
-            // Dash outline when hand is empty (or lobby)
-            <div className="w-full h-[150px] rounded-2xl border border-dashed border-slate-800/60 bg-slate-950/40 flex flex-col items-center justify-center p-4">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                {gameStatus === 'lobby' ? 'Waiting for Game to Start...' : 'Your hand is empty'}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Bottom footer text */}
-        <div className="text-[8px] text-slate-600 uppercase tracking-widest font-semibold mt-1.5 flex items-center gap-3">
-          <span>UNO Real Game Engine v5.0</span>
-          <span>•</span>
-          <span>Click cards to play</span>
-          {isMyTurn && !isSpectator && (
-            <>
-              <span>•</span>
-              <span className="text-emerald-400 font-bold uppercase animate-pulse">Your Turn</span>
-            </>
-          )}
-        </div>
-      </footer>
-
-      {/* =================================================================== */}
       {/* OVERLAYS: Color Selection Wheel Dialog                              */}
       {/* =================================================================== */}
       {gameStatus === 'awaiting_color_selection' && player && colorChooserId === player.id && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 pointer-events-auto">
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col items-center gap-6 shadow-2xl max-w-sm text-center">
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-slate-900/95 border border-slate-700 p-6 rounded-3xl flex flex-col items-center gap-6 shadow-2xl max-w-sm text-center pointer-events-auto backdrop-blur-md">
             <div>
               <h3 className="text-lg font-black uppercase tracking-widest text-white">Choose Color</h3>
               <p className="text-slate-400 text-xs mt-1">Select the active color for the Wild card</p>
