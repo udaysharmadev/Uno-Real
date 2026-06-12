@@ -27,6 +27,10 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
   const [hovered, setHovered] = useState(false);
   const { unoCalled } = useGameStore();
 
+  const ChairSilhouette = () => (
+    <div className="absolute w-[64px] h-[72px] rounded-t-[28px] bg-gradient-to-b from-[#1b2234] to-[#0d101a] border border-slate-700/40 shadow-[0_6px_14px_rgba(0,0,0,0.7)] -z-10 translate-y-[-12px] pointer-events-none transition-all duration-300" />
+  );
+
   const hasCalledUno = player ? !!unoCalled[player.id] : false;
   // UNO Moment triggers when a player has exactly 1 card left and has declared UNO
   const isUnoMoment = player && cardCount === 1 && hasCalledUno;
@@ -37,16 +41,6 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
     const currentUrl = window.location.href;
     navigator.clipboard.writeText(currentUrl);
     alert('Lobby invite link copied to clipboard!');
-  };
-
-  // Position the opponent card counts so they always point toward the table felt center
-  const getOpponentCardsOffsetClass = () => {
-    const leftPct = parseFloat(coords.left);
-    const topPct = parseFloat(coords.top);
-    if (leftPct > 70) return 'right-full mr-3.5 top-1/2 -translate-y-1/2';
-    if (leftPct < 30) return 'left-full ml-3.5 top-1/2 -translate-y-1/2';
-    if (topPct < 40) return 'top-full mt-3 left-1/2 -translate-x-1/2';
-    return 'top-full mt-3 left-1/2 -translate-x-1/2';
   };
 
   // Low Card Tension Config
@@ -115,6 +109,23 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
         top: coords.top,
       }}
     >
+      {/* CSS Keyframes for seated breathing and hand shifting */}
+      <style>{`
+        @keyframes avatar-breathing {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-2.2px) scale(1.015); }
+        }
+        .animate-avatar-breathing {
+          animation: avatar-breathing 4.5s ease-in-out infinite;
+        }
+        @keyframes opponent-hand-shift {
+          0%, 100% { transform: rotate(0deg) translateY(0); }
+          50% { transform: rotate(1.2deg) translateY(-1.5px); }
+        }
+        .animate-opponent-hand-shift {
+          animation: opponent-hand-shift 5.5s ease-in-out infinite;
+        }
+      `}</style>
       {/* Active Turn Spotlight Beam projecting towards center */}
       {player && isActiveTurn && (
         <div 
@@ -152,15 +163,22 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
         )}
 
         {player ? (
-          // Occupied Seat UI: Premium Avatar + Name Capsule
-          <div className="flex flex-col items-center relative z-10">
+          // Occupied Seat UI: Premium Avatar + Name Capsule sitting inside static chair
+          <div className="flex flex-col items-center relative z-10 animate-fade-in duration-500">
             {/* Anchoring floor shadow */}
-            <div className="absolute w-[52px] h-[8px] rounded-full bg-black/75 blur-[3px] translate-y-[24px] z-0 pointer-events-none" />
+            <div className="absolute w-[58px] h-[8px] rounded-full bg-black/80 blur-[3px] translate-y-[26px] z-0 pointer-events-none" />
 
             {/* Profile Avatar inside relative wrapper with Chair silhouette */}
-            <div className="relative flex items-center justify-center">
-              {/* Chair silhouette backrest panel */}
-              <div className="absolute w-[56px] h-[58px] rounded-t-3xl bg-[#111622] border-t border-l border-r border-[#242c3d] -z-10 translate-y-[-6px] shadow-[0_6px_12px_rgba(0,0,0,0.6)] opacity-95 pointer-events-none" />
+            <div 
+              className={`relative flex items-center justify-center animate-avatar-breathing transition-transform duration-500 ${
+                isActiveTurn ? 'scale-105 translate-y-[4px]' : ''
+              }`}
+              style={{
+                animationDelay: `${seatNumber * 0.6}s`
+              }}
+            >
+              {/* Static high-back chair backrest panel */}
+              <ChairSilhouette />
               
               <motion.div
                 whileHover={{ scale: 1.08 }}
@@ -191,27 +209,32 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
               </span>
             </div>
 
-            {/* Opponent Card Stack visualization next to avatar */}
+            {/* Opponent Card Stack visualization centered over torso */}
             {!isLocal && cardCount > 0 && (
-              <div className={`absolute ${getOpponentCardsOffsetClass()} flex flex-col items-center z-10 pointer-events-none`}>
+              <div className="absolute top-[26px] left-1/2 -translate-x-1/2 flex flex-col items-center z-20 pointer-events-none">
                 {/* Visual dynamic fanned card backs */}
-                <div className="flex mb-1.5 justify-center items-end h-[48px]">
+                <div 
+                  className="flex mb-1.5 justify-center items-end h-[36px] animate-opponent-hand-shift"
+                  style={{
+                    animationDelay: `${seatNumber * 0.8}s`
+                  }}
+                >
                   {Array.from({ length: cardCount }).map((_, idx) => {
                     const rot = cardCount <= 1 ? 0 : (idx - (cardCount - 1) / 2) * Math.min(10, 40 / cardCount);
-                    const ty = cardCount <= 1 ? 0 : Math.pow(idx - (cardCount - 1) / 2, 2) * Math.min(1.5, 5 / cardCount);
+                    const ty = cardCount <= 1 ? 0 : Math.pow(idx - (cardCount - 1) / 2, 2) * Math.min(1.2, 4 / cardCount);
                     return (
                       <div 
                         key={`cardback-${idx}`}
-                        className="w-[22px] h-[32px] bg-slate-950 rounded-sm border border-slate-700/80 shadow-md relative overflow-hidden shrink-0 transition-all duration-300"
+                        className="w-[18px] h-[26px] bg-slate-950 rounded-sm border border-slate-700/80 shadow-md relative overflow-hidden shrink-0 transition-all duration-300"
                         style={{
                           transform: `rotate(${rot}deg) translateY(${ty}px)`,
                           background: 'linear-gradient(135deg, #1e1b4b 0%, #030712 100%)',
-                          marginRight: idx < cardCount - 1 ? '-14px' : '0px',
+                          marginRight: idx < cardCount - 1 ? '-11px' : '0px',
                           zIndex: idx,
                         }}
                       >
                         {/* Mini card-back borders */}
-                        <div className="absolute inset-0.5 rounded-[2px] border border-blue-500/10 pointer-events-none" />
+                        <div className="absolute inset-0.5 rounded-[1px] border border-blue-500/10 pointer-events-none" />
                         <div className="absolute inset-0.5 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
                       </div>
                     );
@@ -219,14 +242,14 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
                 </div>
                 
                 {/* Dynamic Card Count Badge with smooth number scale pops */}
-                <div className={`px-2.5 py-0.5 rounded-full shadow-lg flex items-center gap-1.5 border backdrop-blur-sm transition-all duration-300 ${
+                <div className={`px-1.5 py-0.5 rounded-full shadow-lg flex items-center gap-1 border backdrop-blur-sm transition-all duration-300 scale-90 ${
                   cardCount === 1 
                     ? 'bg-red-950/90 border-red-500/40 shadow-red-500/15' 
                     : cardCount === 2
                       ? 'bg-amber-950/90 border-amber-500/40 shadow-amber-500/15'
                       : 'bg-slate-950/90 border-slate-800/85 shadow-md'
                 }`}>
-                  <span className="text-[10px] select-none text-slate-400">🂠</span>
+                  <span className="text-[8px] select-none text-slate-400">🂠</span>
                   <motion.span 
                     key={cardCount}
                     initial={{ scale: 0.7, opacity: 0.6 }}
@@ -235,7 +258,7 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
                       scale: { duration: 0.35, ease: 'easeOut' },
                       opacity: { duration: 0.2 }
                     }}
-                    className={`text-[9px] font-extrabold ${tension.countColor}`}
+                    className={`text-[8px] font-extrabold ${tension.countColor}`}
                   >
                     x{cardCount}
                   </motion.span>
@@ -244,16 +267,23 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
             )}
           </div>
         ) : (
-          // Empty Seat UI: Dashed Ring + Subtle Glow + Invite Label
-          <div className="flex flex-col items-center z-10">
-            <div className={`w-10 h-10 rounded-full border border-dashed flex items-center justify-center bg-slate-950/70 backdrop-blur-sm transition-all duration-300 ${
-              hovered
-                ? 'border-emerald-500/80 bg-emerald-950/20 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.25)]'
-                : 'border-slate-800 text-slate-600'
-            }`}>
+          // Empty Seat UI: Render empty chair, invitation ring in front of it
+          <div className="relative flex flex-col items-center justify-center w-[72px] h-[72px]">
+            <ChairSilhouette />
+            
+            {/* Invitation seat glow on empty cushion */}
+            <div 
+              onClick={handleInvite}
+              className={`w-9 h-9 rounded-full border border-dashed flex items-center justify-center bg-slate-950/80 backdrop-blur-sm transition-all duration-300 z-10 ${
+                hovered
+                  ? 'border-emerald-500/80 bg-emerald-950/20 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.25)]'
+                  : 'border-slate-800 text-slate-600'
+              }`}
+            >
               <UserPlus size={12} className={hovered ? 'animate-pulse' : ''} />
             </div>
-            <span className={`text-[8px] font-extrabold uppercase tracking-widest mt-1 px-1.5 py-0.5 rounded-full border transition-all duration-300 ${
+            
+            <span className={`text-[8px] font-extrabold uppercase tracking-widest mt-1 px-1.5 py-0.5 rounded-full border transition-all duration-300 z-10 ${
               hovered
                 ? 'bg-emerald-950/80 border-emerald-500/30 text-emerald-400'
                 : 'bg-slate-950/50 border-slate-900 text-slate-500'

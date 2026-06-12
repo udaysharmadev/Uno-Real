@@ -108,7 +108,12 @@ export const PlayerHand: React.FC = () => {
                 transition={isShaking ? {
                   duration: 0.4,
                   ease: 'easeInOut'
-                } : undefined}
+                } : {
+                  type: 'spring',
+                  stiffness: 180,
+                  damping: 18,
+                  mass: 0.9
+                }}
                 whileHover={isProcessing || !isCardValid ? {} : { 
                   y: -32, // Deeper hover lift (safe bound)
                   rotateX: 6, // Tilt slightly more forward on hover

@@ -40,6 +40,12 @@ export const useSocket = () => {
     // Transition animator to compare incoming payload and trigger visual card flights
     const handleGameUpdateAnimation = (payload: any) => {
       const state = useGameStore.getState();
+      
+      // Play turn start chime if turn has shifted to a new player
+      if (payload.currentPlayerId && payload.currentPlayerId !== state.currentPlayerId) {
+        soundManager.play('turn_start');
+      }
+
       const localSeat = state.player?.seatNumber || 1;
       const playersList = state.room?.players || [];
       const numPlayers = playersList.length || 2;
@@ -261,6 +267,7 @@ export const useSocket = () => {
     socketInstance.off('game-started');
     socketInstance.on('game-started', (room) => {
       console.log('[Socket] Game started:', room.code);
+      soundManager.play('shuffle');
       addToast('Game has started! Good luck!', 'success');
       setIsProcessing(false);
     });

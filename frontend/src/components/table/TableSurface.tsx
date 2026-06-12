@@ -70,6 +70,29 @@ export const TableSurface: React.FC = () => {
         }
       `}</style>
       
+      {/* Grounded Wood Table Legs (un-tilted, straight vertical pillars) */}
+      {/* Left Leg */}
+      <div 
+        className="absolute left-[33%] top-[53%] w-10 h-44 bg-gradient-to-b from-[#1b0c06] via-[#110703] to-[#080301] shadow-[0_8px_20px_rgba(0,0,0,0.85)] border-l border-r border-amber-950/10 pointer-events-none"
+        style={{
+          clipPath: 'polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%)', // slightly tapered leg
+          zIndex: -5
+        }}
+      />
+      {/* Right Leg */}
+      <div 
+        className="absolute right-[33%] top-[53%] w-10 h-44 bg-gradient-to-b from-[#1b0c06] via-[#110703] to-[#080301] shadow-[0_8px_20px_rgba(0,0,0,0.85)] border-l border-r border-amber-950/10 pointer-events-none"
+        style={{
+          clipPath: 'polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%)', // slightly tapered leg
+          zIndex: -5
+        }}
+      />
+      {/* Center Support Beam */}
+      <div 
+        className="absolute left-[34%] right-[34%] top-[53%] h-5 bg-[#0a0402] border-b border-amber-950/20 shadow-md pointer-events-none"
+        style={{ zIndex: -6 }}
+      />
+
       {/* 1. Wood Side Wall Thickness (Bezel Shadow Layer for 3D depth) */}
       <div 
         className="absolute w-[82%] h-[68%] rounded-[50%] bg-[#150904] pointer-events-none"
@@ -115,6 +138,18 @@ export const TableSurface: React.FC = () => {
                 radial-gradient(circle at 2px 2px, rgba(0,0,0,0.6) 1px, transparent 0)
               `,
               backgroundSize: '5px 5px, 10px 10px'
+            }}
+          />
+
+          {/* Felt wear-and-tear scuff overlays for surface realism */}
+          <div 
+            className="absolute inset-0 opacity-[0.18] mix-blend-overlay pointer-events-none"
+            style={{
+              background: `
+                radial-gradient(circle at 30% 40%, rgba(255,255,255,0.18) 0%, transparent 40%),
+                radial-gradient(circle at 75% 65%, rgba(0,0,0,0.25) 0%, transparent 50%),
+                radial-gradient(circle at 45% 25%, rgba(255,255,255,0.1) 0%, transparent 35%)
+              `
             }}
           />
 

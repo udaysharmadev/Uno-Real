@@ -28,7 +28,7 @@ export const TableScene: React.FC = () => {
 
   const { drawCard } = useSocket();
 
-  const [shakeActive, setShakeActive] = useState(false);
+  const [rumbleType, setRumbleType] = useState<'standard' | 'heavy' | null>(null);
   const [impactColor, setImpactColor] = useState<string | null>(null);
   const [impactKey, setImpactKey] = useState(0);
   const [lastDiscardCount, setLastDiscardCount] = useState(0);
@@ -49,10 +49,14 @@ export const TableScene: React.FC = () => {
         setImpactColor(getCardColorHex(topCard.color));
         setImpactKey((prev) => prev + 1);
 
-        // Draw 4 cards trigger a table rumble shake
+        // Standard card: 180ms rumble, Draw 4: 450ms rumble
         if (topCard.value === 'wild_draw_four') {
-          setShakeActive(true);
-          const timer = setTimeout(() => setShakeActive(false), 450);
+          setRumbleType('heavy');
+          const timer = setTimeout(() => setRumbleType(null), 450);
+          return () => clearTimeout(timer);
+        } else {
+          setRumbleType('standard');
+          const timer = setTimeout(() => setRumbleType(null), 180);
           return () => clearTimeout(timer);
         }
       }
@@ -98,12 +102,59 @@ export const TableScene: React.FC = () => {
 
   return (
     <div 
-      className="w-full h-full relative overflow-hidden flex items-center justify-center"
+      className="w-full h-full relative overflow-hidden flex items-center justify-center animate-camera-drift"
       style={{
         background: 'radial-gradient(circle at 50% -20%, #451a03 0%, #120501 50%, #030000 100%)',
         perspective: '1200px'
       }}
     >
+      {/* 3D Grounded Wooden Floor Panel */}
+      <div 
+        className="absolute bottom-0 w-full h-[55%] pointer-events-none select-none z-0 overflow-hidden"
+        style={{
+          background: 'radial-gradient(circle at 50% 0%, #20120b 0%, #0c0604 100%)',
+          borderTop: '1px solid rgba(251,191,36,0.04)',
+        }}
+      >
+        {/* Wooden floor planks lines */}
+        <div 
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.1) 40px, rgba(255,255,255,0.1) 42px)',
+            transform: 'perspective(400px) rotateX(80deg) origin-top scale(1.8)',
+          }}
+        />
+        {/* Soft table shadow drop cast by heavy wood structure */}
+        <div 
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[78%] h-[75%] rounded-full bg-black/85 blur-[24px]"
+          style={{ transform: 'translateY(-18%)' }}
+        />
+      </div>
+
+      {/* Back Wall & Room Corners */}
+      <div className="absolute inset-x-0 top-0 h-[45%] pointer-events-none select-none z-0 bg-[#0d0705] overflow-hidden">
+        {/* Soft room corner line */}
+        <div className="absolute left-[38%] inset-y-0 w-[1.5px] bg-gradient-to-b from-amber-950/10 via-black/40 to-transparent" />
+        
+        {/* Decorative wall shadow mask */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/20" />
+
+        {/* Decorative Blurred Picture Frame on Wall */}
+        <div className="absolute left-[10%] top-[18%] w-16 h-20 border border-amber-950/20 bg-black/50 rounded shadow-2xl opacity-40 blur-[0.6px] rotate-[1.5deg] flex items-center justify-center">
+          <div className="w-[85%] h-[85%] bg-amber-950/5 border border-amber-950/15 flex items-center justify-center">
+            <span className="text-[12px] text-amber-500/10 font-black">🂠</span>
+          </div>
+        </div>
+
+        {/* Decorative wall shelf with items silhouettes */}
+        <div className="absolute right-[12%] top-[16%] w-28 h-2.5 bg-[#170a04] shadow-md border-b border-amber-950/10 blur-[0.6px] opacity-75">
+          {/* Silhouettes */}
+          <div className="absolute bottom-full right-4 w-3.5 h-6 bg-black/60 rounded-sm" />
+          <div className="absolute bottom-full right-10 w-4.5 h-8 bg-black/60 rounded-sm" />
+          <div className="absolute bottom-full right-18 w-2.5 h-5 bg-black/60 rounded-sm" />
+        </div>
+      </div>
+
       {/* Warm Hanging Lamp Cord & Shade */}
       <div 
         className="absolute top-0 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none opacity-85"
@@ -119,6 +170,16 @@ export const TableScene: React.FC = () => {
       {/* HTML Ambient Lamp Spotlight Blur */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[70%] h-[40%] bg-amber-500/10 blur-[110px] rounded-full pointer-events-none z-0 animate-pulse" />
 
+      {/* Cozy glowing radial corners */}
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-amber-600/5 blur-[120px] rounded-full pointer-events-none z-0" />
+      <div className="absolute top-0 left-0 w-[450px] h-[450px] bg-indigo-900/10 blur-[130px] rounded-full pointer-events-none z-0" />
+
+      {/* Blurred Couch Silhouette behind the hand area */}
+      <div 
+        className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-[85%] h-24 bg-[#0a0502]/90 rounded-t-[50%] blur-[2.5px] border-t border-amber-950/20 pointer-events-none"
+        style={{ zIndex: 1 }}
+      />
+
       {/* Dynamic Keyframe Shakes Injector */}
       <style>{`
         @keyframes table-rumble {
@@ -133,8 +194,18 @@ export const TableScene: React.FC = () => {
           80% { transform: translate(-1px, -1.5px) rotate(1.2deg); }
           90% { transform: translate(2.5px, 2.5px) rotate(0deg); }
         }
-        .animate-table-rumble {
+        .animate-table-rumble-standard {
+          animation: table-rumble 0.18s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        .animate-table-rumble-heavy {
           animation: table-rumble 0.45s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes camera-drift {
+          0%, 100% { transform: translateY(0) translateX(0) rotate(0deg); }
+          50% { transform: translateY(2px) translateX(1px) rotate(0.04deg); }
+        }
+        .animate-camera-drift {
+          animation: camera-drift 12s ease-in-out infinite;
         }
       `}</style>
 
@@ -143,7 +214,9 @@ export const TableScene: React.FC = () => {
       <div className="absolute inset-0 shadow-[inset_0_0_80px_rgba(3,7,18,0.8)] pointer-events-none z-10" />
 
       {/* 2.5D HTML Card Table Container (applying rumble shake & responsive scaling wrapper) */}
-      <div className={`w-full h-full relative flex items-center justify-center transition-transform scale-90 sm:scale-100 origin-center ${shakeActive ? 'animate-table-rumble' : ''}`}>
+      <div className={`w-full h-full relative flex items-center justify-center transition-transform scale-90 sm:scale-100 origin-center ${
+        rumbleType === 'heavy' ? 'animate-table-rumble-heavy' : rumbleType === 'standard' ? 'animate-table-rumble-standard' : ''
+      }`}>
         
         {/* The Oval Felt Table Surface */}
         <TableSurface />
@@ -254,9 +327,13 @@ export const TableScene: React.FC = () => {
           ) : (
             // Render top cards with slight random translations/rotations
             discardPile.slice(-5).map((card, idx, arr) => {
+              const isTop = idx === arr.length - 1;
               return (
-                <div
+                <motion.div
                   key={card.id}
+                  initial={isTop ? { scale: 1.15, y: -15, rotateZ: discardRotation(idx) - 8 } : {}}
+                  animate={isTop ? { scale: 1, y: 0, rotateZ: discardRotation(idx) } : {}}
+                  transition={isTop ? { type: 'spring', stiffness: 220, damping: 12 } : {}}
                   className="absolute"
                   style={{
                     transform: `translate(calc(-50% + ${discardOffsetX(idx)}px), calc(-50% + ${discardOffsetY(idx)}px)) rotateX(54deg) rotateZ(${discardRotation(idx)}deg)`,
@@ -269,7 +346,7 @@ export const TableScene: React.FC = () => {
                     isFaceUp={true} 
                     isSelected={false}
                   />
-                </div>
+                </motion.div>
               );
             })
           )}
@@ -293,7 +370,7 @@ export const TableScene: React.FC = () => {
 
               return (
                 <PlayerSeat
-                  key={occupant.id}
+                  key={`seat-${occupant.seatNumber}`}
                   seatNumber={occupant.seatNumber}
                   player={occupant}
                   isLocal={isLocal}

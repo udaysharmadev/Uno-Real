@@ -17,7 +17,8 @@ export type SoundEvent =
   | 'player_join'
   | 'leave'
   | 'player_leave'
-  | 'reaction';
+  | 'reaction'
+  | 'turn_start';
 
 class SoundManager {
   private enabled: boolean = true;
@@ -212,6 +213,25 @@ class SoundManager {
           
           osc.start(now);
           osc.stop(now + 0.09);
+          break;
+        }
+        case 'turn_start': {
+          // Subtle organic wood-click tick tone
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(800, now);
+          osc.frequency.exponentialRampToValueAtTime(300, now + 0.04);
+          
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+          
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          
+          osc.start(now);
+          osc.stop(now + 0.05);
           break;
         }
       }
