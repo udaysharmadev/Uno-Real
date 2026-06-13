@@ -23,7 +23,7 @@ const WebGLCards = dynamic(
 export const TableScene: React.FC = () => {
   const { room, player, currentPlayerId, isProcessing, isSpectator } = useGameStore();
 
-  const isMyTurn = currentPlayerId === player?.id && room?.status === 'playing';
+  const isMyTurn = currentPlayerId === player?.id && room?.status === 'playing' && !isProcessing;
 
   // Calculate local player index for POV camera positioning
   const playersList = room?.players || [];

@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useLayoutEffect } from 'react';
+import React, { useRef, useMemo, useLayoutEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -8,7 +8,7 @@ export interface PhysicalCardProps {
   isFaceUp: boolean;
   position: [number, number, number];
   rotation: [number, number, number];
-  animateSpawn?: 'drop' | 'none';
+  animateSpawn?: 'drop' | 'none' | 'deal';
   onClick?: () => void;
 }
 
@@ -171,24 +171,37 @@ export const PhysicalCard: React.FC<PhysicalCardProps> = ({
     ];
   }, [color, value]);
 
+  const [hovered, setHovered] = useState(false);
+
   useFrame((state, delta) => {
-    if (meshRef.current) {
-      // Cap delta to avoid large jumps on lag spikes
-      const safeDelta = Math.min(delta, 0.1);
-      const dt = 1 - Math.exp(-10 * safeDelta);
-      
-      meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, position[0], dt);
-      meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, position[1], dt);
-      meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, position[2], dt);
+    if (!meshRef.current) return;
 
-      const finalRotation = isFaceUp 
-        ? rotation 
-        : [rotation[0], rotation[1], rotation[2] + Math.PI];
+    const finalPosition = position;
+    const finalRotation = isFaceUp 
+      ? rotation 
+      : [rotation[0], rotation[1], rotation[2] + Math.PI];
 
+    // Target positions based on hover
+    const targetY = hovered && onClick ? finalPosition[1] + 0.05 : finalPosition[1];
+    
+    // Smoothly interpolate current position and rotation to target
+    const dt = 1.0 - Math.exp(-15 * delta); // Frame-rate independent lerp factor
+
+    if (animateSpawn === 'deal') {
+      meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, targetY, dt * 0.5);
+      meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, finalRotation[0], dt * 0.5);
+      meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, finalRotation[1], dt * 0.5);
+      meshRef.current.rotation.z = THREE.MathUtils.lerp(meshRef.current.rotation.z, finalRotation[2], dt * 0.5);
+    } else {
+      meshRef.current.position.lerp(new THREE.Vector3(finalPosition[0], targetY, finalPosition[2]), dt);
       meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, finalRotation[0], dt);
       meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, finalRotation[1], dt);
       meshRef.current.rotation.z = THREE.MathUtils.lerp(meshRef.current.rotation.z, finalRotation[2], dt);
     }
+
+    // Smooth hover emissive glow
+    (materials[4] as THREE.MeshStandardMaterial).emissive.setHex(hovered && onClick ? 0x222222 : 0x000000);
+    (materials[5] as THREE.MeshStandardMaterial).emissive.setHex(hovered && onClick ? 0x222222 : 0x000000);
   });
 
   return (
@@ -206,11 +219,13 @@ export const PhysicalCard: React.FC<PhysicalCardProps> = ({
       onPointerOver={(e) => {
         if (onClick) {
           e.stopPropagation();
+          setHovered(true);
           document.body.style.cursor = 'pointer';
         }
       }}
       onPointerOut={(e) => {
         if (onClick) {
+          setHovered(false);
           document.body.style.cursor = 'auto';
         }
       }}

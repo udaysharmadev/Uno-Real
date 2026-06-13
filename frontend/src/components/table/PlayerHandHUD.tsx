@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../../hooks/useSocket';
 
 export const PlayerHandHUD: React.FC = () => {
-  const { room, player, currentPlayerId, playerCards } = useGameStore();
+  const { room, player, currentPlayerId, playerCards, isProcessing } = useGameStore();
   const { playCard } = useSocket();
 
   if (!room || !player || !['playing', 'awaiting_color_selection'].includes(room.status)) {
@@ -16,7 +16,7 @@ export const PlayerHandHUD: React.FC = () => {
 
   const hand = playerCards[player.seatNumber] || [];
   const cardCount = hand.length;
-  const isMyTurn = currentPlayerId === player.id;
+  const isMyTurn = currentPlayerId === player.id && !isProcessing;
 
   // Render a CSS replica of an UNO card
   const renderCard = (card: any, idx: number) => {

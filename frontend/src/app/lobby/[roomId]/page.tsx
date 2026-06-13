@@ -342,40 +342,7 @@ export default function LobbyPage() {
       {/* Reactions Layer Overlay */}
       <ReactionsHandler />
 
-      {/* Floating Socket Debug Panel */}
-      {debugMode && (
-        <div className="fixed top-4 left-4 z-[99] bg-slate-950/95 border border-red-500/50 p-4 rounded-2xl shadow-2xl font-mono text-[9px] text-slate-200 max-w-xs pointer-events-auto backdrop-blur-md">
-          <div className="flex justify-between items-center border-b border-slate-800 pb-1.5 mb-2">
-            <span className="font-bold text-red-400 uppercase tracking-widest text-[8px]">Socket Debug Panel</span>
-            <span className="bg-red-950/80 text-red-400 px-1 rounded uppercase font-bold text-[7px]">Ctrl+Shift+D</span>
-          </div>
-          <div className="space-y-1.5">
-            <div><span className="text-slate-500">Connected:</span> <span className={socket?.connected ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>{socket?.connected ? 'TRUE' : 'FALSE'}</span></div>
-            <div><span className="text-slate-500">Game Status:</span> <span className="text-blue-400 font-bold uppercase">{gameStatus}</span></div>
-            <div><span className="text-slate-500">Local Player ID:</span> <span className="text-slate-300">{player?.id || 'Spectator/Null'}</span></div>
-            <div><span className="text-slate-500">Current Turn ID:</span> <span className="text-slate-300">{currentPlayerId || 'None'}</span></div>
-            <div><span className="text-slate-500">Current Turn Seat:</span> <span className="text-slate-300">{currentPlayerSeat || 'None'}</span></div>
-            <div><span className="text-slate-500">Discard Pile Size:</span> <span className="text-slate-300">{discardPile.length}</span></div>
-            <div>
-              <span className="text-slate-500">Top Discard:</span>{' '}
-              <span className="text-amber-400 font-bold">
-                {discardPile.length > 0
-                  ? `${discardPile[discardPile.length - 1].color.toUpperCase()} ${discardPile[discardPile.length - 1].value.toUpperCase()}`
-                  : 'None'}
-              </span>
-            </div>
-            <div>
-              <span className="text-slate-500">Cards In Hand:</span>{' '}
-              <span className="text-purple-400 font-bold">
-                {myHand.length}
-              </span>
-            </div>
-            <div className="max-h-20 overflow-y-auto border-t border-slate-900 pt-1 text-[8px] text-slate-400">
-              {myHand.map(c => `${c.color.toUpperCase()}_${c.value.toUpperCase()}`).join(', ') || 'No cards'}
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Toast Notifications Container */}
       <div className="fixed top-4 right-4 z-[999] flex flex-col gap-2 pointer-events-none max-w-sm w-full">

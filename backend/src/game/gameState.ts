@@ -11,4 +11,9 @@ export interface UnoGameState {
   colorChooserId: string | null; // socketId of the player who must choose a color
   winnerId: string | null; // socketId of the winner when game ends
   unoCalled: Record<string, boolean>; // socketId -> boolean
+  lastAction?: {
+    type: 'play' | 'draw';
+    playerId: string;
+    card?: CardItem;
+  };
 }

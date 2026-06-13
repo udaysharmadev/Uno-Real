@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.callUnoAction = exports.chooseColorAction = exports.playCardAction = exports.drawCardAction = exports.startGameState = void 0;
+exports.catchUnoAction = exports.callUnoAction = exports.chooseColorAction = exports.playCardAction = exports.drawCardAction = exports.startGameState = void 0;
 const deck_1 = require("./deck");
 const rules_1 = require("./rules");
 const turnManager_1 = require("./turnManager");
@@ -131,6 +131,7 @@ const drawCardAction = (state, players, playerId) => {
     const currentIndex = players.findIndex(p => p.id === playerId);
     const nextIndex = (0, turnManager_1.getNextPlayerIndex)(currentIndex, state.direction, players.length, 1);
     state.currentPlayerId = players[nextIndex].id;
+    state.lastAction = { type: 'draw', playerId };
     return state;
 };
 exports.drawCardAction = drawCardAction;
@@ -193,6 +194,7 @@ const playCardAction = (state, players, playerId, cardId) => {
         const nextIndex = (0, turnManager_1.getNextPlayerIndex)(currentIndex, state.direction, players.length, skipCount);
         state.currentPlayerId = players[nextIndex].id;
     }
+    state.lastAction = { type: 'play', playerId, card };
     return state;
 };
 exports.playCardAction = playCardAction;
@@ -241,3 +243,24 @@ const callUnoAction = (state, playerId) => {
     return state;
 };
 exports.callUnoAction = callUnoAction;
+/**
+ * Penalizes a player who has 1 card but forgot to call UNO.
+ */
+const catchUnoAction = (state, targetPlayerId) => {
+    if (state.status !== 'playing' && state.status !== 'awaiting_color_selection') {
+        throw new Error('Game is not active');
+    }
+    const hand = state.hands[targetPlayerId];
+    if (!hand || hand.length !== 1) {
+        throw new Error('Target player does not have exactly 1 card');
+    }
+    if (state.unoCalled[targetPlayerId]) {
+        throw new Error('Target player already called UNO safely');
+    }
+    // Penalty: Draw 2 cards
+    drawCardsHelper(state, 2, targetPlayerId);
+    // They are now safe after penalty
+    state.unoCalled[targetPlayerId] = true;
+    return state;
+};
+exports.catchUnoAction = catchUnoAction;

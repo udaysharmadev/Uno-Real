@@ -1,7 +1,7 @@
 /**
  * Sound Manager for UNO Real.
- * Uses the Web Audio API to synthesize clean, organic card game sound effects
- * directly in the browser, removing the need for external asset downloads.
+ * Uses the Web Audio API to fetch, decode, and play high-quality audio files.
+ * Designed for a premium, immersive tabletop experience.
  */
 
 export type SoundEvent = 
@@ -18,11 +18,33 @@ export type SoundEvent =
   | 'leave'
   | 'player_leave'
   | 'reaction'
-  | 'turn_start';
+  | 'turn_start'
+  | 'hover';
 
 class SoundManager {
   private enabled: boolean = true;
   private ctx: AudioContext | null = null;
+  private buffers: Map<string, AudioBuffer> = new Map();
+  private loadQueue: Set<string> = new Set();
+
+  // Mapping events to actual sound file paths in /public/sounds/
+  private readonly EVENT_MAP: Record<SoundEvent, string> = {
+    card_play: '/sounds/card_place.mp3',
+    card_place: '/sounds/card_place.mp3',
+    card_draw: '/sounds/card_draw.mp3',
+    shuffle: '/sounds/shuffle.mp3',
+    uno: '/sounds/uno_call.mp3',
+    uno_call: '/sounds/uno_call.mp3',
+    victory: '/sounds/victory.mp3',
+    win: '/sounds/victory.mp3',
+    join: '/sounds/player_join.mp3',
+    player_join: '/sounds/player_join.mp3',
+    leave: '/sounds/player_leave.mp3',
+    player_leave: '/sounds/player_leave.mp3',
+    reaction: '/sounds/reaction.mp3',
+    turn_start: '/sounds/turn_start.mp3',
+    hover: '/sounds/hover.mp3'
+  };
 
   private initCtx() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -34,210 +56,81 @@ class SoundManager {
   }
 
   /**
-   * Plays the synthesized audio associated with the gameplay event.
+   * Preloads an audio file into the buffer cache.
    */
-  public play(event: SoundEvent) {
+  private async loadSound(url: string): Promise<AudioBuffer | null> {
+    if (!this.ctx) this.initCtx();
+    if (!this.ctx) return null;
+
+    if (this.buffers.has(url)) return this.buffers.get(url)!;
+    if (this.loadQueue.has(url)) return null; // Already loading
+
+    this.loadQueue.add(url);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to load ${url}: ${response.status}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+      this.buffers.set(url, audioBuffer);
+      return audioBuffer;
+    } catch (e) {
+      // Silently fail if sounds aren't added to /public yet
+      console.warn(`[SoundManager] Missing audio file: ${url}`);
+      return null;
+    } finally {
+      this.loadQueue.delete(url);
+    }
+  }
+
+  /**
+   * Plays the audio associated with the gameplay event.
+   */
+  public play(event: SoundEvent, volumeScale: number = 1.0) {
     if (!this.enabled) return;
     this.initCtx();
     if (!this.ctx) return;
-    const ctx = this.ctx;
-    
+
     // Resume context if suspended (browser security autoplay policies)
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
     }
 
-    try {
-      const now = ctx.currentTime;
-      switch (event) {
-        case 'card_play':
-        case 'card_place': {
-          // Soft physical felt thud (card landing on table felt)
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(140, now);
-          osc.frequency.exponentialRampToValueAtTime(42, now + 0.12);
-          
-          gain.gain.setValueAtTime(0.24, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-          
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          
-          osc.start(now);
-          osc.stop(now + 0.14);
-          break;
+    const url = this.EVENT_MAP[event];
+    if (!url) return;
+
+    const buffer = this.buffers.get(url);
+    
+    // If not loaded yet, try loading it and play when ready
+    if (!buffer) {
+      this.loadSound(url).then(loadedBuffer => {
+        if (loadedBuffer) {
+          this.playSoundBuffer(loadedBuffer, volumeScale);
         }
-        case 'card_draw': {
-          // Soft swoop friction slide (drawing a card)
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(290, now);
-          osc.frequency.exponentialRampToValueAtTime(110, now + 0.18);
-          
-          gain.gain.setValueAtTime(0.06, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-          
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          
-          osc.start(now);
-          osc.stop(now + 0.2);
-          break;
-        }
-        case 'shuffle': {
-          // Repeating cards rustling tick sequence
-          for (let i = 0; i < 7; i++) {
-            const time = now + i * 0.075;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(110 + Math.random() * 90, time);
-            
-            gain.gain.setValueAtTime(0.04, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-            
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            osc.start(time);
-            osc.stop(time + 0.06);
-          }
-          break;
-        }
-        case 'uno':
-        case 'uno_call': {
-          // Friendly chime arpeggio
-          const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
-          notes.forEach((freq, idx) => {
-            const time = now + idx * 0.08;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, time);
-            
-            gain.gain.setValueAtTime(0.08, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
-            
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            osc.start(time);
-            osc.stop(time + 0.35);
-          });
-          break;
-        }
-        case 'win':
-        case 'victory': {
-          // Clean major scale chime fanfare
-          const chords = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-          chords.forEach((freq, idx) => {
-            const time = now + idx * 0.09;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, time);
-            
-            gain.gain.setValueAtTime(0.09, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.38);
-            
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            osc.start(time);
-            osc.stop(time + 0.42);
-          });
-          break;
-        }
-        case 'join':
-        case 'player_join': {
-          // Warm ascending invite chime
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(261.63, now); // C4
-          osc.frequency.exponentialRampToValueAtTime(523.25, now + 0.22); // C5
-          
-          gain.gain.setValueAtTime(0.07, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-          
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          
-          osc.start(now);
-          osc.stop(now + 0.24);
-          break;
-        }
-        case 'leave':
-        case 'player_leave': {
-          // Soft descending chime
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(523.25, now); // C5
-          osc.frequency.exponentialRampToValueAtTime(261.63, now + 0.22); // C4
-          
-          gain.gain.setValueAtTime(0.07, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-          
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          
-          osc.start(now);
-          osc.stop(now + 0.24);
-          break;
-        }
-        case 'reaction': {
-          // Cute bubble pop sound
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(390, now);
-          osc.frequency.exponentialRampToValueAtTime(850, now + 0.08);
-          
-          gain.gain.setValueAtTime(0.04, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-          
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          
-          osc.start(now);
-          osc.stop(now + 0.09);
-          break;
-        }
-        case 'turn_start': {
-          // Subtle organic wood-click tick tone
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(800, now);
-          osc.frequency.exponentialRampToValueAtTime(300, now + 0.04);
-          
-          gain.gain.setValueAtTime(0.05, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-          
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          
-          osc.start(now);
-          osc.stop(now + 0.05);
-          break;
-        }
-      }
-    } catch (e) {
-      console.warn('[SoundManager] Web Audio playback failed:', e);
+      });
+      return;
     }
+
+    this.playSoundBuffer(buffer, volumeScale);
+  }
+
+  private playSoundBuffer(buffer: AudioBuffer, volumeScale: number) {
+    if (!this.ctx) return;
+    
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    
+    const gainNode = this.ctx.createGain();
+    
+    // Default volumes for specific sounds to prevent them from being too loud
+    let baseVolume = 0.5;
+    gainNode.gain.value = baseVolume * volumeScale;
+    
+    source.connect(gainNode);
+    gainNode.connect(this.ctx.destination);
+    
+    source.start(0);
   }
 
   public setEnabled(enabled: boolean) {

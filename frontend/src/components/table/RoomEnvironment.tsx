@@ -2,6 +2,7 @@
 
 import React, { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 export interface RoomEnvironmentProps {
@@ -10,73 +11,88 @@ export interface RoomEnvironmentProps {
   children?: React.ReactNode;
 }
 
-function CameraSetup({ numPlayers, localIndex }: RoomEnvironmentProps) {
-  const { camera, gl } = useThree();
-  const time = useRef(0);
-  const basePosition = useRef(new THREE.Vector3());
+function CameraSetup() {
+  const { camera } = useThree();
 
   useEffect(() => {
-    // Camera pulled 20% closer per user request
-    const radius = 2.24; // Was 2.8
-    const angle = 0; // Fixed angle to prevent camera/avatar double-rotation collision
-    
-    const x = Math.sin(angle) * radius;
-    const y = 1.45; // Was 1.8. Lowered slightly so lamp isn't cut off
-    const z = Math.cos(angle) * radius;
+    // Initial camera placement
+    const radius = 2.24;
+    const y = 1.45;
+    const z = radius;
 
-    camera.position.set(x, y, z);
-    basePosition.current.set(x, y, z);
+    camera.position.set(0, y, z);
     camera.lookAt(0, 1.0, 0);
 
     const perspCam = camera as THREE.PerspectiveCamera;
-    perspCam.fov = 75; // Wider FOV (75) to see the ceiling mount and the player hand simultaneously
+    perspCam.fov = 75;
     perspCam.updateProjectionMatrix();
-
-    // Attach zoom listeners
-    const canvas = gl.domElement;
-    let currentZoom = 1.0;
-    
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      currentZoom -= e.deltaY * 0.001;
-      currentZoom = Math.max(0.85, Math.min(1.15, currentZoom));
-      perspCam.zoom = currentZoom;
-      perspCam.updateProjectionMatrix();
-    };
-    
-    const handleDblClick = () => {
-      currentZoom = 1.0;
-      perspCam.zoom = currentZoom;
-      perspCam.updateProjectionMatrix();
-    };
-
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
-    canvas.addEventListener('dblclick', handleDblClick);
-    
-    return () => {
-      canvas.removeEventListener('wheel', handleWheel);
-      canvas.removeEventListener('dblclick', handleDblClick);
-    };
-  }, [camera, gl.domElement, numPlayers, localIndex]);
-
-  useFrame((state, delta) => {
-    time.current += delta;
-    
-    // Slow breathing effect
-    const breathY = Math.sin(time.current * 1.5) * 0.015;
-    const breathRotX = Math.cos(time.current * 1.2) * 0.002;
-    const breathRotY = Math.sin(time.current * 1.3) * 0.002;
-
-    camera.position.y = basePosition.current.y + breathY;
-    
-    camera.lookAt(0, 1.0, 0);
-    
-    // Apply breathing rotation offsets
-    camera.rotateX(breathRotX);
-    camera.rotateY(breathRotY);
-  });
+  }, [camera]);
 
   return null;
+}
+
+
+
+function Flies() {
+  const fly1Ref = useRef<THREE.Group>(null);
+  const fly2Ref = useRef<THREE.Group>(null);
+  const wings1Ref = useRef<THREE.Group>(null);
+  const wings2Ref = useRef<THREE.Group>(null);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (fly1Ref.current && wings1Ref.current) {
+      fly1Ref.current.position.x = Math.sin(t * 1.5) * 0.3;
+      fly1Ref.current.position.y = 1.3 + Math.sin(t * 2.5) * 0.15;
+      fly1Ref.current.position.z = Math.cos(t * 1.8) * 0.3;
+      fly1Ref.current.rotation.y = t * 10;
+      fly1Ref.current.rotation.z = Math.sin(t * 20) * 0.5;
+      // Flap wings rapidly
+      wings1Ref.current.rotation.x = Math.sin(t * 150) * 0.6;
+    }
+    if (fly2Ref.current && wings2Ref.current) {
+      fly2Ref.current.position.x = Math.sin(t * 1.2 + 2) * 0.4;
+      fly2Ref.current.position.y = 1.2 + Math.cos(t * 2.2) * 0.2;
+      fly2Ref.current.position.z = Math.cos(t * 1.9 + 1) * 0.25;
+      fly2Ref.current.rotation.y = t * 12;
+      fly2Ref.current.rotation.z = Math.cos(t * 22) * 0.5;
+      // Flap wings rapidly
+      wings2Ref.current.rotation.x = Math.cos(t * 180) * 0.6;
+    }
+  });
+
+  const FlyModel = ({ flyRef, wingsRef, scale }: any) => (
+    <group ref={flyRef} scale={scale}>
+      {/* Body */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <capsuleGeometry args={[0.005, 0.015, 4, 8]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
+      </mesh>
+      {/* Head */}
+      <mesh position={[0, 0, 0.012]}>
+        <sphereGeometry args={[0.004, 8, 8]} />
+        <meshStandardMaterial color="#3a0d0d" roughness={0.5} />
+      </mesh>
+      {/* Wings */}
+      <group ref={wingsRef} position={[0, 0.005, -0.002]}>
+        <mesh position={[0.008, 0, -0.005]} rotation={[-Math.PI / 6, 0.3, 0]}>
+          <planeGeometry args={[0.012, 0.02]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.3} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh position={[-0.008, 0, -0.005]} rotation={[-Math.PI / 6, -0.3, 0]}>
+          <planeGeometry args={[0.012, 0.02]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.3} side={THREE.DoubleSide} />
+        </mesh>
+      </group>
+    </group>
+  );
+
+  return (
+    <group>
+      <FlyModel flyRef={fly1Ref} wingsRef={wings1Ref} scale={1.8} />
+      <FlyModel flyRef={fly2Ref} wingsRef={wings2Ref} scale={1.5} />
+    </group>
+  );
 }
 
 function Floor() {
@@ -148,7 +164,13 @@ function GameTable() {
     <group>
       {/* Tabletop */}
       <mesh geometry={tabletopGeo} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.83, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color="#1a0c04" roughness={0.7} metalness={0.02} />
+        <meshPhysicalMaterial 
+          color="#1a0a03" 
+          roughness={0.65} 
+          metalness={0.1} 
+          clearcoat={0.3} 
+          clearcoatRoughness={0.4} 
+        />
       </mesh>
 
       {/* Felt surface */}
@@ -248,13 +270,16 @@ function HangingLamp() {
         ref={spotRef}
         position={[0, 1.65, 0]}
         angle={Math.PI / 2.8}
-        penumbra={0.6}
-        intensity={80}
+        penumbra={0.85}
+        intensity={60}
         color="#ffcc77"
         castShadow
-        distance={15}
+        distance={10}
         decay={2}
       />
+
+      {/* Tiny dark flies buzzing around the lamp */}
+      <Flies />
 
       {/* Spotlight target */}
       <object3D ref={targetRef} position={[0, 0.85, 0]} />
@@ -271,11 +296,22 @@ function HangingLamp() {
 function Scene({ numPlayers, localIndex, children }: RoomEnvironmentProps) {
   return (
     <>
-      <CameraSetup numPlayers={numPlayers} localIndex={localIndex} />
-      <fog attach="fog" args={['#020101', 5, 25]} />
+      <CameraSetup />
+      <OrbitControls 
+        makeDefault
+        target={[0, 0.9, 0]}
+        minDistance={1.0}
+        maxDistance={4.0}
+        maxPolarAngle={Math.PI / 2.5} // Keep camera strictly above table horizon
+        minAzimuthAngle={-Math.PI / 3}
+        maxAzimuthAngle={Math.PI / 3}
+        enableDamping={true}
+        dampingFactor={0.03}
+      />
+      <fog attach="fog" args={['#080402', 6, 35]} />
       
       {/* Dim ambient room visibility (deep dark blue/brown) */}
-      <hemisphereLight args={['#0a1220', '#020101', 0.15]} />
+      <hemisphereLight args={['#120a05', '#050201', 0.15]} />
 
       {/* Under-table bounce light for table legs */}
       <pointLight position={[0, 0.4, 0]} intensity={30} color="#ffaa55" distance={5} decay={2} castShadow />

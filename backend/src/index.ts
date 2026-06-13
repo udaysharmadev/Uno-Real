@@ -3,7 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { roomManager } from './rooms/roomManager';
-import { drawCardAction, playCardAction, chooseColorAction, callUnoAction } from './game/actions';
+import { drawCardAction, playCardAction, chooseColorAction, callUnoAction, catchUnoAction } from './game/actions';
 import { CardColor } from './game/deck';
 
 // Helper to sanitize and broadcast game state to each player individually
@@ -12,7 +12,29 @@ function broadcastGameState(code: string) {
   if (!room || !room.game) return;
 
   const game = room.game;
-  console.log(`[GAME_STATE_UPDATED] Broadcasted to room: ${room.code}`);
+
+  // Safety: validate currentPlayerId references an actual player in the room
+  if (game.status === 'playing' || game.status === 'awaiting_color_selection') {
+    const currentPlayerExists = room.players.some(p => p.id === game.currentPlayerId);
+    if (!currentPlayerExists && room.players.length > 0) {
+      const fallback = room.players[0];
+      console.log(`[TURN_RECOVERY] currentPlayerId '${game.currentPlayerId}' is stale (no matching player). Resetting to ${fallback.name} (${fallback.id})`);
+      game.currentPlayerId = fallback.id;
+      // Also reset color selection state if stale
+      if (game.status === 'awaiting_color_selection') {
+        game.status = 'playing';
+        game.colorChooserId = null;
+      }
+    }
+  }
+
+  const activePlayerObj = room.players.find(p => p.id === game.currentPlayerId);
+  const activePlayerName = activePlayerObj ? activePlayerObj.name : 'Unknown';
+  console.log(`[GAME_STATE_UPDATED] roomId: ${room.code}, turnPlayerId: ${game.currentPlayerId}, turnPlayerName: ${activePlayerName}, drawPileLength: ${game.deck.length}, discardPileLength: ${game.discardPile.length}`);
+  
+  room.players.forEach((p) => {
+    console.log(`  Player -> playerId: ${p.id}, socketId: ${p.id}, seat: ${p.seatNumber}, cards.length: ${game.hands[p.id]?.length || 0}`);
+  });
   
   room.players.forEach((targetPlayer) => {
     // Sanitize hands: targetPlayer sees their own cards, and placeholders for others
@@ -53,6 +75,7 @@ function broadcastGameState(code: string) {
       winnerId: game.winnerId,
       winnerName: winnerObj ? winnerObj.name : null,
       unoCalled: game.unoCalled,
+      lastAction: game.lastAction,
     });
   });
 
@@ -233,7 +256,7 @@ io.on('connection', (socket) => {
   });
 
   // Play card event
-  socket.on('play-card', ({ cardId }: { cardId: string }) => {
+  socket.on('play-card', ({ cardId, playerId }: { cardId: string; playerId: string }) => {
     if (!currentRoomCode) return;
     const room = roomManager.getRoom(currentRoomCode);
     if (!room || !room.game) return;
@@ -242,6 +265,13 @@ io.on('connection', (socket) => {
       const player = room.players.find(p => p.id === socket.id);
       const playerName = player ? player.name : 'Unknown';
       console.log(`[CARD_PLAYED] Player: ${playerName}, Card: ${cardId}`);
+
+      // Proactive stale-turn recovery: if currentPlayerId doesn't match any active player, fix it
+      const currentTurnValid = room.players.some(p => p.id === room.game!.currentPlayerId);
+      if (!currentTurnValid && player) {
+        console.log(`[TURN_RECOVERY] currentPlayerId '${room.game!.currentPlayerId}' is stale. Recovering to ${playerName} (${socket.id})`);
+        room.game!.currentPlayerId = socket.id;
+      }
 
       const oldPlayerId = room.game.currentPlayerId;
       const updatedGame = playCardAction(room.game, room.players, socket.id, cardId);
@@ -278,6 +308,13 @@ io.on('connection', (socket) => {
       const player = room.players.find(p => p.id === socket.id);
       const playerName = player ? player.name : 'Unknown';
       console.log(`[CARD_DRAWN] Player: ${playerName}`);
+
+      // Proactive stale-turn recovery
+      const currentTurnValid = room.players.some(p => p.id === room.game!.currentPlayerId);
+      if (!currentTurnValid && player) {
+        console.log(`[TURN_RECOVERY] currentPlayerId '${room.game!.currentPlayerId}' is stale. Recovering to ${playerName} (${socket.id})`);
+        room.game!.currentPlayerId = socket.id;
+      }
 
       const oldPlayerId = room.game.currentPlayerId;
       const updatedGame = drawCardAction(room.game, room.players, socket.id);
@@ -339,6 +376,24 @@ io.on('connection', (socket) => {
     } catch (error: any) {
       console.error(`[Socket] Call UNO error:`, error.message);
       socket.emit('error', { message: error.message || 'Failed to call UNO' });
+    }
+  });
+
+  // Catch UNO event
+  socket.on('catch-uno', ({ targetPlayerId }: { targetPlayerId: string }) => {
+    if (!currentRoomCode) return;
+    const room = roomManager.getRoom(currentRoomCode);
+    if (!room || !room.game) return;
+
+    try {
+      const updatedGame = catchUnoAction(room.game, targetPlayerId);
+      room.game = updatedGame;
+
+      console.log(`[Socket] Player ${currentName} caught ${targetPlayerId} not calling UNO in room ${currentRoomCode}`);
+      broadcastGameState(currentRoomCode);
+    } catch (error: any) {
+      console.error(`[Socket] Catch UNO error:`, error.message);
+      socket.emit('error', { message: error.message || 'Failed to catch UNO' });
     }
   });
 

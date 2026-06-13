@@ -49,6 +49,15 @@ export const useSocket = () => {
       const localSeat = state.player?.seatNumber || 1;
       const playersList = state.room?.players || [];
       const numPlayers = playersList.length || 2;
+      // If initial state load, merge immediately to prevent massive simultaneous fly-in overlaps
+      // and to avoid deadlocks when joining mid-game
+      const isInitialLoad = state.gameStatus !== 'playing' || state.discardPile.length === 0;
+
+      if (isInitialLoad) {
+        setGameState(payload);
+        return;
+      }
+
       const localIndex = state.room ? playersList.findIndex(p => p.id === state.player?.id) : -1;
 
       // Play sound effects based on what changed
@@ -71,8 +80,7 @@ export const useSocket = () => {
         }
       }
 
-      // Synchronously and authoritatively replace the local state
-      // This completely eliminates any race conditions caused by legacy async animation delays
+      // Synchronously and authoritatively replace the local state immediately
       setGameState(payload);
     };
 
@@ -279,13 +287,29 @@ export const useSocket = () => {
   };
 
   const playCard = (cardId: string) => {
+    const state = useGameStore.getState();
+    if (state.isProcessing) return;
+
     if (socket) {
-      socket.emit('play-card', { cardId });
+      console.log({
+        clickedBy: state.player?.name,
+        clickedById: state.player?.id,
+        currentTurn: state.room?.players?.find(p => p.id === state.currentPlayerId)?.name,
+        currentTurnId: state.currentPlayerId,
+        cardId,
+        socketId: socket.id
+      });
+      useGameStore.setState({ isProcessing: true });
+      socket.emit('play-card', { cardId, playerId: state.player?.id });
     }
   };
 
   const drawCard = () => {
+    const state = useGameStore.getState();
+    if (state.isProcessing) return;
+
     if (socket) {
+      useGameStore.setState({ isProcessing: true });
       socket.emit('draw-card');
     }
   };
@@ -302,6 +326,12 @@ export const useSocket = () => {
     }
   };
 
+  const catchUno = (targetPlayerId: string) => {
+    if (socket) {
+      socket.emit('catch-uno', { targetPlayerId });
+    }
+  };
+
   return {
     socket,
     createRoom,
@@ -312,5 +342,6 @@ export const useSocket = () => {
     drawCard,
     chooseColor,
     callUno,
+    catchUno,
   };
 };

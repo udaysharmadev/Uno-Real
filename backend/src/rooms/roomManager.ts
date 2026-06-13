@@ -1,5 +1,6 @@
 import { UnoGameState } from '../game/gameState';
 import { startGameState } from '../game/actions';
+import { getNextPlayerIndex } from '../game/turnManager';
 
 export interface Player {
   id: string; // Socket ID
@@ -180,9 +181,18 @@ class RoomManager {
             game.colorChooserId = playerSocketId;
           }
 
+          if (game.winnerId === oldSocketId) {
+            game.winnerId = playerSocketId;
+          }
+
           if (game.unoCalled[oldSocketId] !== undefined) {
             game.unoCalled[playerSocketId] = game.unoCalled[oldSocketId];
             delete game.unoCalled[oldSocketId];
+          }
+
+          // Remap lastAction playerId if it references the old socket
+          if (game.lastAction && game.lastAction.playerId === oldSocketId) {
+            game.lastAction.playerId = playerSocketId;
           }
         }
       }
@@ -275,6 +285,36 @@ class RoomManager {
         }
 
         console.log(`[ROOM_LEAVE] Player: ${leftPlayer.name}, Socket: ${playerSocketId}, Room: ${code}`);
+
+        // Clean up game state if a game is active
+        if (room.game && room.players.length > 0) {
+          const game = room.game;
+
+          // Remove the player's hand
+          delete game.hands[playerSocketId];
+          delete game.unoCalled[playerSocketId];
+
+          // If the leaving player was the color chooser, reset to playing and advance turn
+          if (game.colorChooserId === playerSocketId) {
+            game.colorChooserId = null;
+            game.status = 'playing';
+          }
+
+          // If it was the leaving player's turn, advance to the next valid player
+          if (game.currentPlayerId === playerSocketId) {
+            // Find next player from the remaining players array
+            // Use index 0 as fallback since the leaving player is already removed
+            const nextIdx = room.players.length > 0 ? 0 : -1;
+            if (nextIdx >= 0) {
+              game.currentPlayerId = room.players[nextIdx].id;
+              console.log(`[TURN_ADVANCED_ON_LEAVE] Next Player: ${room.players[nextIdx].name} (${room.players[nextIdx].id})`);
+            }
+          }
+        } else if (room.game && room.players.length === 0) {
+          // No players left, end the game
+          room.game = undefined;
+          room.status = 'lobby';
+        }
 
         // If the player was the host and there are other players, elect a new host
         if (leftPlayer.isHost && room.players.length > 0) {

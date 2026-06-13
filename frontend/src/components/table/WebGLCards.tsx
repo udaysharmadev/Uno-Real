@@ -9,10 +9,10 @@ import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 
 export const WebGLCards: React.FC = () => {
-  const { room, player, currentPlayerId, playerCards, discardPile, drawPileCount, gameStatus } = useGameStore();
+  const { room, player, currentPlayerId, playerCards, discardPile, drawPileCount, gameStatus, isProcessing } = useGameStore();
   const { playCard, drawCard } = useSocket();
 
-  const isMyTurn = currentPlayerId === player?.id && (gameStatus === 'playing' || gameStatus === 'awaiting_color_selection');
+  const isMyTurn = currentPlayerId === player?.id && (gameStatus === 'playing' || gameStatus === 'awaiting_color_selection') && !isProcessing;
 
   // Must render cards when playing OR waiting for color selection OR game ended
   if (!room || !['playing', 'awaiting_color_selection', 'ended'].includes(gameStatus)) return null;
@@ -59,12 +59,14 @@ export const WebGLCards: React.FC = () => {
 
       {/* 2. DRAW PILE (LEFT SIDE) */}
       <group position={[-0.3, 0.896, 0]}>
-        {Array.from({ length: Math.min(15, drawPileCount) }).map((_, idx) => {
+        {Array.from({ length: Math.max(1, Math.min(15, drawPileCount)) }).map((_, idx) => {
           const randAngle = (Math.sin(idx * 12.9898) * 43758.5453) % 1;
           const randRot = (Math.cos(idx * 78.233) * 43758.5453) % 1;
           
           const xOffset = (randAngle - 0.5) * 0.04;
           const zOffset = (randRot - 0.5) * 0.04;
+
+          const isClickable = (drawPileCount > 0 ? idx === Math.min(15, drawPileCount) - 1 : idx === 0) && isMyTurn;
 
           return (
             <PhysicalCard
@@ -74,7 +76,7 @@ export const WebGLCards: React.FC = () => {
               isFaceUp={false}
               position={[xOffset, idx * 0.002, zOffset]}
               rotation={[0, 0, 0]}
-              onClick={idx === Math.min(15, drawPileCount) - 1 && isMyTurn ? () => drawCard() : undefined}
+              onClick={isClickable ? () => drawCard() : undefined}
             />
           );
         })}

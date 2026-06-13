@@ -150,6 +150,8 @@ export const drawCardAction = (state: UnoGameState, players: Player[], playerId:
   const nextIndex = getNextPlayerIndex(currentIndex, state.direction, players.length, 1);
   state.currentPlayerId = players[nextIndex].id;
 
+  state.lastAction = { type: 'draw', playerId };
+
   return state;
 };
 
@@ -227,6 +229,8 @@ export const playCardAction = (
     state.currentPlayerId = players[nextIndex].id;
   }
 
+  state.lastAction = { type: 'play', playerId, card };
+
   return state;
 };
 
@@ -283,5 +287,31 @@ export const callUnoAction = (state: UnoGameState, playerId: string): UnoGameSta
   }
   
   state.unoCalled[playerId] = true;
+  return state;
+};
+
+/**
+ * Penalizes a player who has 1 card but forgot to call UNO.
+ */
+export const catchUnoAction = (state: UnoGameState, targetPlayerId: string): UnoGameState => {
+  if (state.status !== 'playing' && state.status !== 'awaiting_color_selection') {
+    throw new Error('Game is not active');
+  }
+
+  const hand = state.hands[targetPlayerId];
+  if (!hand || hand.length !== 1) {
+    throw new Error('Target player does not have exactly 1 card');
+  }
+
+  if (state.unoCalled[targetPlayerId]) {
+    throw new Error('Target player already called UNO safely');
+  }
+
+  // Penalty: Draw 2 cards
+  drawCardsHelper(state, 2, targetPlayerId);
+  
+  // They are now safe after penalty
+  state.unoCalled[targetPlayerId] = true;
+
   return state;
 };

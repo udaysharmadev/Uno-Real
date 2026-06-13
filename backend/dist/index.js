@@ -36,6 +36,7 @@ function broadcastGameState(code) {
         const activePlayerObj = room.players.find(p => p.id === game.currentPlayerId);
         const activeSeat = activePlayerObj ? activePlayerObj.seatNumber : 1;
         const winnerObj = game.winnerId ? room.players.find(p => p.id === game.winnerId) : null;
+        console.log(`[BROADCAST] Room ${room.code} Player ${targetPlayer.id} Discard Pile Length: ${game.discardPile?.length}`);
         io.to(targetPlayer.id).emit('game-updated', {
             roomCode: room.code,
             hands: sanitizedHands,
@@ -50,6 +51,7 @@ function broadcastGameState(code) {
             winnerId: game.winnerId,
             winnerName: winnerObj ? winnerObj.name : null,
             unoCalled: game.unoCalled,
+            lastAction: game.lastAction,
         });
     });
     const activePlayer = room.players.find(p => p.id === game.currentPlayerId);
@@ -305,6 +307,24 @@ io.on('connection', (socket) => {
         catch (error) {
             console.error(`[Socket] Call UNO error:`, error.message);
             socket.emit('error', { message: error.message || 'Failed to call UNO' });
+        }
+    });
+    // Catch UNO event
+    socket.on('catch-uno', ({ targetPlayerId }) => {
+        if (!currentRoomCode)
+            return;
+        const room = roomManager_1.roomManager.getRoom(currentRoomCode);
+        if (!room || !room.game)
+            return;
+        try {
+            const updatedGame = (0, actions_1.catchUnoAction)(room.game, targetPlayerId);
+            room.game = updatedGame;
+            console.log(`[Socket] Player ${currentName} caught ${targetPlayerId} not calling UNO in room ${currentRoomCode}`);
+            broadcastGameState(currentRoomCode);
+        }
+        catch (error) {
+            console.error(`[Socket] Catch UNO error:`, error.message);
+            socket.emit('error', { message: error.message || 'Failed to catch UNO' });
         }
     });
     // Manual leave-room event
