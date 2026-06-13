@@ -112,19 +112,21 @@ class RoomManager {
             // Rebind active game state properties
             if (room.game) {
                 const game = room.game;
-                if (game.hands[oldSocketId]) {
-                    game.hands[playerSocketId] = game.hands[oldSocketId];
-                    delete game.hands[oldSocketId];
-                }
-                if (game.unoCalled[oldSocketId] !== undefined) {
-                    game.unoCalled[playerSocketId] = game.unoCalled[oldSocketId];
-                    delete game.unoCalled[oldSocketId];
-                }
-                if (game.currentPlayerId === oldSocketId) {
-                    game.currentPlayerId = playerSocketId;
-                }
-                if (game.colorChooserId === oldSocketId) {
-                    game.colorChooserId = playerSocketId;
+                if (oldSocketId !== playerSocketId) {
+                    if (game.hands[oldSocketId]) {
+                        game.hands[playerSocketId] = game.hands[oldSocketId];
+                        delete game.hands[oldSocketId];
+                    }
+                    if (game.currentPlayerId === oldSocketId) {
+                        game.currentPlayerId = playerSocketId;
+                    }
+                    if (game.colorChooserId === oldSocketId) {
+                        game.colorChooserId = playerSocketId;
+                    }
+                    if (game.unoCalled[oldSocketId] !== undefined) {
+                        game.unoCalled[playerSocketId] = game.unoCalled[oldSocketId];
+                        delete game.unoCalled[oldSocketId];
+                    }
                 }
             }
             console.log(`[PLAYER_RECONNECTED] Rebound name "${playerName}" from socket ${oldSocketId} to ${playerSocketId}`);

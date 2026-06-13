@@ -18,7 +18,7 @@ function CameraSetup({ numPlayers, localIndex }: RoomEnvironmentProps) {
   useEffect(() => {
     // Camera pulled 20% closer per user request
     const radius = 2.24; // Was 2.8
-    const angle = (Math.PI * 2 / Math.max(numPlayers, 2)) * localIndex;
+    const angle = 0; // Fixed angle to prevent camera/avatar double-rotation collision
     
     const x = Math.sin(angle) * radius;
     const y = 1.45; // Was 1.8. Lowered slightly so lamp isn't cut off

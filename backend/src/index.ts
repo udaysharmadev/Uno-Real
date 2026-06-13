@@ -37,6 +37,8 @@ function broadcastGameState(code: string) {
 
     const winnerObj = game.winnerId ? room.players.find(p => p.id === game.winnerId) : null;
 
+    console.log(`[BROADCAST] Room ${room.code} Player ${targetPlayer.id} Discard Pile Length: ${game.discardPile?.length}`);
+
     io.to(targetPlayer.id).emit('game-updated', {
       roomCode: room.code,
       hands: sanitizedHands,

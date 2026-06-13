@@ -20,38 +20,15 @@ export const WebGLCards: React.FC = () => {
   const numPlayers = Math.max(playersList.length, 2);
   const localPlayerIndex = playersList.findIndex(p => p.id === player?.id);
   const safeLocalIndex = localPlayerIndex >= 0 ? localPlayerIndex : 0;
-  const topCard = discardPile[discardPile.length - 1];
+  
+  console.log(`[COMPONENT WebGLCards] Render Discard Pile. Array:`, discardPile);
+  console.log(`[COMPONENT WebGLCards] Sliced Discard Pile Length:`, discardPile.slice(-10).length);
 
   return (
     <group>
-      {/* ============================================================== */}
-      {/* FORCE TEST / DEBUG RENDERING                                 */}
-      {/* ============================================================== */}
-      {topCard && (
-        <group position={[0, 1.2, 0.5]} scale={[1.5, 1.5, 1.5]}>
-          <Html position={[0, 0.8, 0]} center zIndexRange={[100, 0]}>
-            <div className="bg-black/90 p-4 border-2 border-red-500 rounded-xl text-white font-mono text-center whitespace-nowrap">
-              <div className="font-bold text-xl text-red-500 mb-2">TOP CARD DEBUG</div>
-              <div className="text-lg">COLOR: <span className="text-yellow-400 font-black uppercase">{topCard.color}</span></div>
-              <div className="text-lg">VALUE: <span className="text-yellow-400 font-black uppercase">{topCard.value}</span></div>
-              <div className="text-xs text-gray-400 mt-2">ID: {topCard.id}</div>
-              <div className="text-xs text-gray-400">STACK SIZE: {discardPile.length}</div>
-            </div>
-          </Html>
-          <PhysicalCard
-            key={`giant-${topCard.id}`}
-            color={topCard.color}
-            value={topCard.value}
-            isFaceUp={true}
-            position={[0, 0, 0]}
-            rotation={[-0.2, 0, 0]} // Tilted slightly towards camera
-          />
-        </group>
-      )}
-
       {/* 1. DISCARD PILE (RIGHT SIDE) */}
-      <group position={[0.25, 0.88, 0]}>
-        {discardPile.slice(-4).map((card, sliceIdx, arr) => {
+      <group position={[0.3, 0.896, 0]}>
+        {discardPile.slice(-10).map((card, sliceIdx, arr) => {
           // sliceIdx is 0 to 3. idx should be the actual index for pseudo-randomness
           const actualIdx = discardPile.length - arr.length + sliceIdx;
           const isTop = sliceIdx === arr.length - 1;
@@ -77,7 +54,7 @@ export const WebGLCards: React.FC = () => {
       </group>
 
       {/* 2. DRAW PILE (LEFT SIDE) */}
-      <group position={[-0.25, 0.88, 0]}>
+      <group position={[-0.3, 0.896, 0]}>
         {Array.from({ length: Math.min(15, drawPileCount) }).map((_, idx) => {
           const randAngle = (Math.sin(idx * 12.9898) * 43758.5453) % 1;
           const randRot = (Math.cos(idx * 78.233) * 43758.5453) % 1;

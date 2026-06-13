@@ -29,8 +29,8 @@ export const PhysicalCard: React.FC<PhysicalCardProps> = ({
   useLayoutEffect(() => {
     if (meshRef.current) {
       if (!isMounted.current && animateSpawn === 'drop') {
-        // Spawn near the local camera
-        currentPos.current.set(0, 1.5, 1.5);
+        // Spawn slightly above target position so it drops onto the pile correctly
+        currentPos.current.set(targetPos.x, targetPos.y + 0.5, targetPos.z);
       } else {
         currentPos.current.copy(targetPos);
       }
@@ -40,6 +40,17 @@ export const PhysicalCard: React.FC<PhysicalCardProps> = ({
         ? rotation 
         : [rotation[0], rotation[1], rotation[2] + Math.PI];
       meshRef.current.rotation.set(finalRotation[0], finalRotation[1], finalRotation[2]);
+
+      if (isFaceUp) {
+        // Log explicitly for the discard pile (isFaceUp=true)
+        const worldPos = new THREE.Vector3();
+        meshRef.current.getWorldPosition(worldPos);
+        console.log(`[DISCARD MESH TRACE] Target Position (Local):`, targetPos.toArray());
+        console.log(`[DISCARD MESH TRACE] World Position:`, worldPos.toArray());
+        console.log(`[DISCARD MESH TRACE] Final Rotation:`, finalRotation);
+        console.log(`[DISCARD MESH TRACE] Scale:`, meshRef.current.scale.toArray());
+        console.log(`[DISCARD MESH TRACE] RenderOrder:`, meshRef.current.renderOrder);
+      }
     }
     isMounted.current = true;
   }, [targetPos, animateSpawn, isFaceUp, rotation]);

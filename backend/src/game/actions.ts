@@ -84,6 +84,9 @@ export const startGameState = (players: Player[]): UnoGameState => {
   const [startingCard] = deck.splice(firstCardIndex, 1);
   const discardPile = [startingCard];
 
+  console.log(`[GAME START] DISCARD PILE LENGTH: ${discardPile.length}`);
+  console.log(`[GAME START] TOP CARD:`, startingCard);
+
   // 4. Determine first player and play direction
   let startPlayerIndex = 0;
   let direction: 'clockwise' | 'counter-clockwise' = 'clockwise';
@@ -183,6 +186,9 @@ export const playCardAction = (
   // Remove card from hand and push to discard pile
   playerHand.splice(cardIndex, 1);
   state.discardPile.push(card);
+
+  console.log(`[PLAY CARD] DISCARD PILE LENGTH: ${state.discardPile.length}`);
+  console.log(`[PLAY CARD] TOP CARD:`, card);
 
   // Reset wild color chooser variables
   state.wildColor = null;

@@ -189,21 +189,24 @@ export const useGameStore = create<GameState>((set) => ({
     unoCalled: {},
   }),
 
-  setGameState: (payload) => set((state) => ({
-    playerCards: payload.hands,
-    discardPile: payload.discardPile,
-    drawPileCount: payload.drawPileCount,
-    currentPlayerId: payload.currentPlayerId,
-    currentPlayerSeat: payload.currentPlayerSeat,
-    direction: payload.direction,
-    wildColor: payload.wildColor,
-    gameStatus: payload.gameStatus,
-    colorChooserId: payload.colorChooserId,
-    winnerId: payload.winnerId,
-    winnerName: payload.winnerName,
-    unoCalled: payload.unoCalled,
-    isProcessing: false,
-  })),
+  setGameState: (payload) => {
+    console.log(`[STORE] SETTING GAME STATE. DISCARD PILE:`, payload.discardPile?.length, 'TOP:', payload.discardPile?.[payload.discardPile.length - 1]);
+    set((state) => ({
+      playerCards: payload.hands,
+      discardPile: payload.discardPile,
+      drawPileCount: payload.drawPileCount,
+      currentPlayerId: payload.currentPlayerId,
+      currentPlayerSeat: payload.currentPlayerSeat,
+      direction: payload.direction,
+      wildColor: payload.wildColor,
+      gameStatus: payload.gameStatus,
+      colorChooserId: payload.colorChooserId,
+      winnerId: payload.winnerId,
+      winnerName: payload.winnerName,
+      unoCalled: payload.unoCalled,
+      isProcessing: false,
+    }));
+  },
 
   reset: () => set({ 
     room: null, 
