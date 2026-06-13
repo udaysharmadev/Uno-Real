@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useSocket } from '../../hooks/useSocket';
 import { PhysicalCard } from '../cards/PhysicalCard';
+import { CinematicSharedTopCard } from './CinematicSharedTopCard';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 
@@ -51,6 +52,9 @@ export const WebGLCards: React.FC = () => {
             />
           );
         })}
+
+        {/* Standing top card display — part of the pile */}
+        <CinematicSharedTopCard />
       </group>
 
       {/* 2. DRAW PILE (LEFT SIDE) */}

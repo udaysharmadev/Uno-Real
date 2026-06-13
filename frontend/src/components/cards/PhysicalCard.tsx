@@ -12,6 +12,98 @@ export interface PhysicalCardProps {
   onClick?: () => void;
 }
 
+const canvasCache: Record<string, { front: HTMLCanvasElement, back: HTMLCanvasElement }> = {};
+
+// Helper to generate and cache canvases (prevents DOM canvas limit crash)
+const getCardCanvases = (color: string, value: string) => {
+  const cacheKey = `${color}-${value}`;
+  if (canvasCache[cacheKey]) {
+    return canvasCache[cacheKey];
+  }
+
+  // Front canvas
+  const frontCanvas = document.createElement('canvas');
+  frontCanvas.width = 256;
+  frontCanvas.height = 380;
+  const fctx = frontCanvas.getContext('2d');
+  if (fctx) {
+    const colorMap: Record<string, string> = {
+      red: '#D32F2F',    // Deep UNO red
+      blue: '#1976D2',   // Deep UNO blue
+      green: '#388E3C',  // Deep UNO green
+      yellow: '#FBC02D', // Deep UNO yellow
+      wild: '#111111',   // Near black
+    };
+    
+    fctx.fillStyle = '#ffffff';
+    fctx.fillRect(0, 0, 256, 380);
+
+    fctx.fillStyle = colorMap[color] || '#ffffff';
+    fctx.fillRect(10, 10, 236, 360);
+
+    fctx.fillStyle = '#ffffff';
+    fctx.beginPath();
+    fctx.ellipse(128, 190, 90, 140, 0, 0, 2 * Math.PI);
+    fctx.fill();
+
+    fctx.fillStyle = color === 'wild' ? '#000000' : (colorMap[color] || '#000000');
+    fctx.font = 'bold 80px sans-serif';
+    fctx.textAlign = 'center';
+    fctx.textBaseline = 'middle';
+    
+    let displayVal = value;
+    if (value === 'draw_two') displayVal = '+2';
+    if (value === 'wild_draw_four') displayVal = '+4';
+    if (value === 'skip') displayVal = '⊘';
+    if (value === 'reverse') displayVal = '⇄';
+    if (value === 'wild') displayVal = 'W';
+
+    fctx.fillText(displayVal, 128, 190);
+
+    fctx.font = 'bold 40px sans-serif';
+    fctx.fillStyle = '#ffffff';
+    fctx.fillText(displayVal, 40, 50);
+    
+    fctx.save();
+    fctx.translate(216, 330);
+    fctx.rotate(Math.PI);
+    fctx.fillText(displayVal, 0, 0);
+    fctx.restore();
+  }
+
+  // Back canvas
+  const backCanvas = document.createElement('canvas');
+  backCanvas.width = 256;
+  backCanvas.height = 380;
+  const bctx = backCanvas.getContext('2d');
+  if (bctx) {
+    bctx.fillStyle = '#ffffff';
+    bctx.fillRect(0, 0, 256, 380);
+
+    bctx.fillStyle = '#111111';
+    bctx.fillRect(10, 10, 236, 360);
+
+    bctx.fillStyle = '#cc0000';
+    bctx.beginPath();
+    bctx.ellipse(128, 190, 90, 140, 0, 0, 2 * Math.PI);
+    bctx.fill();
+
+    bctx.fillStyle = '#ffe200';
+    bctx.font = 'bold 60px sans-serif';
+    bctx.textAlign = 'center';
+    bctx.textBaseline = 'middle';
+    bctx.save();
+    bctx.translate(128, 190);
+    bctx.rotate(-Math.PI / 4);
+    bctx.fillText('UNO', 0, 0);
+    bctx.restore();
+  }
+  
+  const canvases = { front: frontCanvas, back: backCanvas };
+  canvasCache[cacheKey] = canvases;
+  return canvases;
+};
+
 export const PhysicalCard: React.FC<PhysicalCardProps> = ({
   color,
   value,
@@ -29,7 +121,6 @@ export const PhysicalCard: React.FC<PhysicalCardProps> = ({
   useLayoutEffect(() => {
     if (meshRef.current) {
       if (!isMounted.current && animateSpawn === 'drop') {
-        // Spawn slightly above target position so it drops onto the pile correctly
         currentPos.current.set(targetPos.x, targetPos.y + 0.5, targetPos.z);
       } else {
         currentPos.current.copy(targetPos);
@@ -40,17 +131,6 @@ export const PhysicalCard: React.FC<PhysicalCardProps> = ({
         ? rotation 
         : [rotation[0], rotation[1], rotation[2] + Math.PI];
       meshRef.current.rotation.set(finalRotation[0], finalRotation[1], finalRotation[2]);
-
-      if (isFaceUp) {
-        // Log explicitly for the discard pile (isFaceUp=true)
-        const worldPos = new THREE.Vector3();
-        meshRef.current.getWorldPosition(worldPos);
-        console.log(`[DISCARD MESH TRACE] Target Position (Local):`, targetPos.toArray());
-        console.log(`[DISCARD MESH TRACE] World Position:`, worldPos.toArray());
-        console.log(`[DISCARD MESH TRACE] Final Rotation:`, finalRotation);
-        console.log(`[DISCARD MESH TRACE] Scale:`, meshRef.current.scale.toArray());
-        console.log(`[DISCARD MESH TRACE] RenderOrder:`, meshRef.current.renderOrder);
-      }
     }
     isMounted.current = true;
   }, [targetPos, animateSpawn, isFaceUp, rotation]);
@@ -63,100 +143,23 @@ export const PhysicalCard: React.FC<PhysicalCardProps> = ({
   });
 
   const materials = useMemo(() => {
-    // Front texture
-    const frontCanvas = document.createElement('canvas');
-    frontCanvas.width = 256;
-    frontCanvas.height = 380;
-    const fctx = frontCanvas.getContext('2d');
-    if (fctx) {
-      const colorMap: Record<string, string> = {
-        red: '#ff5555',
-        blue: '#5555ff',
-        green: '#55aa55',
-        yellow: '#ffaa00',
-        wild: '#222222',
-      };
-      
-      // White border
-      fctx.fillStyle = '#ffffff';
-      fctx.fillRect(0, 0, 256, 380);
+    const { front, back } = getCardCanvases(color, value);
 
-      // Inner color
-      fctx.fillStyle = colorMap[color] || '#ffffff';
-      fctx.fillRect(10, 10, 236, 360);
-
-      // Center oval
-      fctx.fillStyle = '#ffffff';
-      fctx.beginPath();
-      fctx.ellipse(128, 190, 90, 140, 0, 0, 2 * Math.PI);
-      fctx.fill();
-
-      // Main Text
-      fctx.fillStyle = color === 'wild' ? '#000000' : (colorMap[color] || '#000000');
-      fctx.font = 'bold 80px sans-serif';
-      fctx.textAlign = 'center';
-      fctx.textBaseline = 'middle';
-      
-      let displayVal = value;
-      if (value === 'draw_two') displayVal = '+2';
-      if (value === 'wild_draw_four') displayVal = '+4';
-      if (value === 'skip') displayVal = '⊘';
-      if (value === 'reverse') displayVal = '⇄';
-      if (value === 'wild') displayVal = 'W';
-
-      fctx.fillText(displayVal, 128, 190);
-
-      // Corner texts
-      fctx.font = 'bold 40px sans-serif';
-      fctx.fillStyle = '#ffffff';
-      fctx.fillText(displayVal, 40, 50);
-      
-      fctx.save();
-      fctx.translate(216, 330);
-      fctx.rotate(Math.PI);
-      fctx.fillText(displayVal, 0, 0);
-      fctx.restore();
-    }
-    const frontTex = new THREE.CanvasTexture(frontCanvas);
+    const frontTex = new THREE.CanvasTexture(front);
     frontTex.colorSpace = THREE.SRGBColorSpace;
+    frontTex.generateMipmaps = true;
+    frontTex.minFilter = THREE.LinearMipmapLinearFilter;
+    frontTex.needsUpdate = true; // Ensure it updates if newly created
 
-    // Back texture
-    const backCanvas = document.createElement('canvas');
-    backCanvas.width = 256;
-    backCanvas.height = 380;
-    const bctx = backCanvas.getContext('2d');
-    if (bctx) {
-      // White border
-      bctx.fillStyle = '#ffffff';
-      bctx.fillRect(0, 0, 256, 380);
-
-      // Black/Dark background
-      bctx.fillStyle = '#111111';
-      bctx.fillRect(10, 10, 236, 360);
-
-      // Red oval
-      bctx.fillStyle = '#cc0000';
-      bctx.beginPath();
-      bctx.ellipse(128, 190, 90, 140, 0, 0, 2 * Math.PI);
-      bctx.fill();
-
-      // UNO text
-      bctx.fillStyle = '#ffe200';
-      bctx.font = 'bold 60px sans-serif';
-      bctx.textAlign = 'center';
-      bctx.textBaseline = 'middle';
-      bctx.save();
-      bctx.translate(128, 190);
-      bctx.rotate(-Math.PI / 4);
-      bctx.fillText('UNO', 0, 0);
-      bctx.restore();
-    }
-    const backTex = new THREE.CanvasTexture(backCanvas);
+    const backTex = new THREE.CanvasTexture(back);
     backTex.colorSpace = THREE.SRGBColorSpace;
+    backTex.generateMipmaps = true;
+    backTex.minFilter = THREE.LinearMipmapLinearFilter;
+    backTex.needsUpdate = true;
 
     const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.1 });
-    const frontMaterial = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.6, metalness: 0.1 });
-    const backMaterial = new THREE.MeshStandardMaterial({ map: backTex, roughness: 0.6, metalness: 0.1 });
+    const frontMaterial = new THREE.MeshBasicMaterial({ map: frontTex });
+    const backMaterial = new THREE.MeshBasicMaterial({ map: backTex });
 
     return [
       edgeMaterial,  // +x
