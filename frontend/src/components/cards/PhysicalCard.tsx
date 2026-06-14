@@ -14,6 +14,42 @@ export interface PhysicalCardProps {
 
 const canvasCache: Record<string, { front: HTMLCanvasElement, back: HTMLCanvasElement }> = {};
 
+// Helper to generate a shared, extremely lightweight noise map for paper grain
+let sharedBumpMap: THREE.CanvasTexture | null = null;
+const getSharedBumpMap = () => {
+  if (sharedBumpMap) return sharedBumpMap;
+  
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = '#808080'; // Neutral bump
+    ctx.fillRect(0, 0, size, size);
+    
+    const imgData = ctx.getImageData(0, 0, size, size);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      // Extremely subtle variation for soft paper grain
+      const noise = 128 + (Math.random() - 0.5) * 5; 
+      data[i] = noise;
+      data[i+1] = noise;
+      data[i+2] = noise;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+  
+  sharedBumpMap = new THREE.CanvasTexture(canvas);
+  sharedBumpMap.wrapS = THREE.RepeatWrapping;
+  sharedBumpMap.wrapT = THREE.RepeatWrapping;
+  sharedBumpMap.repeat.set(2, 3);
+  sharedBumpMap.minFilter = THREE.LinearFilter;
+  sharedBumpMap.magFilter = THREE.LinearFilter;
+  sharedBumpMap.needsUpdate = true;
+  return sharedBumpMap;
+};
+
 // Helper to generate and cache canvases (prevents DOM canvas limit crash)
 const getCardCanvases = (color: string, value: string) => {
   const cacheKey = `${color}-${value}`;
@@ -157,9 +193,20 @@ export const PhysicalCard: React.FC<PhysicalCardProps> = ({
     backTex.minFilter = THREE.LinearMipmapLinearFilter;
     backTex.needsUpdate = true;
 
+    const bumpMap = getSharedBumpMap();
+
+    const premiumCardStock = {
+      roughness: 0.65,         // Semi-matte finish
+      metalness: 0.05,         // Slight density
+      clearcoat: 0.35,         // Premium coated finish
+      clearcoatRoughness: 0.4, // Soft reflections
+      bumpMap: bumpMap,
+      bumpScale: 0.0003,       // Extremely subtle texture only visible in light
+    };
+
     const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.1 });
-    const frontMaterial = new THREE.MeshBasicMaterial({ map: frontTex });
-    const backMaterial = new THREE.MeshBasicMaterial({ map: backTex });
+    const frontMaterial = new THREE.MeshPhysicalMaterial({ map: frontTex, ...premiumCardStock });
+    const backMaterial = new THREE.MeshPhysicalMaterial({ map: backTex, ...premiumCardStock });
 
     return [
       edgeMaterial,  // +x
