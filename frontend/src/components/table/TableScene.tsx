@@ -19,6 +19,14 @@ const WebGLCards = dynamic(
   () => import('./WebGLCards').then(mod => ({ default: mod.WebGLCards })),
   { ssr: false }
 );
+const CardFlightAnimations = dynamic(
+  () => import('./CardFlightAnimations').then(mod => ({ default: mod.CardFlightAnimations })),
+  { ssr: false }
+);
+const ActionEffects3D = dynamic(
+  () => import('./ActionEffects3D').then(mod => ({ default: mod.ActionEffects3D })),
+  { ssr: false }
+);
 
 export const TableScene: React.FC = () => {
   const { room, player, currentPlayerId, isProcessing, isSpectator } = useGameStore();
@@ -39,17 +47,13 @@ export const TableScene: React.FC = () => {
       <RoomEnvironment numPlayers={numPlayers} localIndex={safeLocalIndex}>
         <WebGLSeats />
         <WebGLCards />
+        <CardFlightAnimations />
+        <ActionEffects3D />
       </RoomEnvironment>
 
       {/* HUD LAYER */}
       <PlayerHandHUD />
 
-      {/* Elegant Room Code display */}
-      <div className="absolute top-6 left-6 z-50">
-        <div className="px-3 py-1 bg-black/40 border border-white/10 rounded backdrop-blur-md text-white/50 font-mono text-xs cursor-copy hover:text-white transition-colors">
-          Lobby: {room?.code}
-        </div>
-      </div>
     </div>
   );
 };

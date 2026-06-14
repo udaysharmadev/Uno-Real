@@ -9,19 +9,30 @@ export interface RoomEnvironmentProps {
   numPlayers: number;
   localIndex: number;
   children?: React.ReactNode;
+  isLandingPage?: boolean;
 }
 
-function CameraSetup() {
+function CameraSetup({ isLandingPage }: { isLandingPage?: boolean }) {
   const { camera } = useThree();
 
   useEffect(() => {
     // Initial camera placement
-    const radius = 2.24;
-    const y = 1.45;
-    const z = radius;
+    let radius = 2.24;
+    let y = 1.45;
+    let z = radius;
+
+    if (isLandingPage) {
+      // Cinematic hero shot for the landing page
+      y = 1.6;
+      z = 3.5;
+    }
 
     camera.position.set(0, y, z);
-    camera.lookAt(0, 1.0, 0);
+    if (isLandingPage) {
+      camera.lookAt(0, 0.7, 0); // Look slightly lower at the table
+    } else {
+      camera.lookAt(0, 1.0, 0);
+    }
 
     const perspCam = camera as THREE.PerspectiveCamera;
     perspCam.fov = 75;
@@ -212,9 +223,10 @@ function GameTable() {
   );
 }
 
-function HangingLamp() {
+function HangingLamp({ isLandingPage }: { isLandingPage?: boolean }) {
   const spotRef = useRef<THREE.SpotLight>(null);
   const targetRef = useRef<THREE.Object3D>(null);
+  const lampGroupRef = useRef<THREE.Group>(null);
 
   const shadeGeo = useMemo(() => {
     const points = [
@@ -240,8 +252,17 @@ function HangingLamp() {
     }
   }, []);
 
+  useFrame(({ clock }) => {
+    if (isLandingPage && lampGroupRef.current) {
+      const t = clock.getElapsedTime();
+      // Extremely subtle, slow swing (about 1 degree)
+      lampGroupRef.current.rotation.z = Math.sin(t * 0.5) * 0.015;
+      lampGroupRef.current.rotation.x = Math.cos(t * 0.4) * 0.01;
+    }
+  });
+
   return (
-    <group>
+    <group ref={lampGroupRef}>
       {/* Ceiling mount */}
       <mesh position={[0, 2.2, 0]}>
         <cylinderGeometry args={[0.06, 0.08, 0.04, 16]} />
@@ -293,16 +314,15 @@ function HangingLamp() {
   );
 }
 
-function Scene({ numPlayers, localIndex, children }: RoomEnvironmentProps) {
+function Scene({ numPlayers, localIndex, isLandingPage, children }: RoomEnvironmentProps) {
   return (
     <>
-      <CameraSetup />
+      <CameraSetup isLandingPage={isLandingPage} />
       <OrbitControls 
         makeDefault
         target={[0, 0.9, 0]}
-        minDistance={1.0}
-        maxDistance={4.0}
-        maxPolarAngle={Math.PI / 2.5} // Keep camera strictly above table horizon
+        minPolarAngle={Math.PI / 4}
+        maxPolarAngle={Math.PI / 2.2} // Keep camera strictly above table horizon
         minAzimuthAngle={-Math.PI / 3}
         maxAzimuthAngle={Math.PI / 3}
         enableDamping={true}
@@ -318,13 +338,13 @@ function Scene({ numPlayers, localIndex, children }: RoomEnvironmentProps) {
 
       <Floor />
       <GameTable />
-      <HangingLamp />
+      <HangingLamp isLandingPage={isLandingPage} />
       {children}
     </>
   );
 }
 
-export function RoomEnvironment({ numPlayers, localIndex, children }: RoomEnvironmentProps) {
+export const RoomEnvironment: React.FC<RoomEnvironmentProps> = ({ numPlayers, localIndex, isLandingPage, children }) => {
   return (
     <Canvas
       shadows
@@ -336,7 +356,7 @@ export function RoomEnvironment({ numPlayers, localIndex, children }: RoomEnviro
       }}
       style={{ background: '#020101', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
     >
-      <Scene numPlayers={numPlayers} localIndex={localIndex}>
+      <Scene numPlayers={numPlayers} localIndex={localIndex} isLandingPage={isLandingPage}>
         {children}
       </Scene>
     </Canvas>

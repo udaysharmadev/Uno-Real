@@ -7,14 +7,15 @@ import { useSocket } from '../../../hooks/useSocket';
 import { useGameStore } from '../../../store/useGameStore';
 import { ReactionsHandler } from '../../../components/social/ReactionsHandler';
 import { getSeatCoords } from '../../../utils/seating';
+import { TurnGlowIndicator } from '../../../components/table/TurnGlowIndicator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Copy, 
   Check, 
   LogOut, 
   ShieldAlert, 
-  Loader2, 
-  ArrowUpCircle
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { getCardColorHex, getCardValueLabel, isValidMove } from '../../../lib/cards/cardEngine';
 
@@ -406,17 +407,35 @@ export default function LobbyPage() {
         )}
 
         {/* HUD: Overlay Top Header Panel */}
-        <header className="absolute top-0 left-0 right-0 p-3.5 flex justify-between items-center z-20 pointer-events-none gap-2">
-          {/* Branding & Status Info */}
-          <div className="glass-panel rounded-lg px-3 py-1 flex items-center gap-1.5 pointer-events-auto shadow-md opacity-90">
-            <span className={`w-1.5 h-1.5 rounded-full animate-pulse shadow-lg ${isSpectator ? 'bg-amber-500 shadow-amber-500/60' : 'bg-green-500 shadow-green-500/60'}`} />
-            <span className="text-[10px] font-bold text-white tracking-wide">
-              {isSpectator ? '⚡ Spectating' : '🏆 UNO Real'}
-            </span>
-          </div>
+        <header className="absolute top-0 left-0 right-0 p-5 flex justify-between items-start z-20 pointer-events-none">
+          {/* Top Left: Compact Lobby Panel */}
+          {room && (
+            <div className="pointer-events-auto">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  handleCopyCode();
+                  addToast('Copied to clipboard', 'success');
+                }}
+                className="group flex items-center gap-2.5 bg-slate-900/60 hover:bg-slate-800/80 backdrop-blur-md border border-slate-700/50 rounded-xl px-4 py-2 shadow-lg transition-all"
+                title="Copy Room Code"
+              >
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                  Lobby:
+                </span>
+                <span className="text-sm font-black text-white tracking-wider font-mono">
+                  {room.code}
+                </span>
+                <div className="text-slate-400 group-hover:text-white transition-colors ml-1">
+                  {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                </div>
+              </motion.button>
+            </div>
+          )}
 
-          <div className="flex gap-2 items-center pointer-events-auto ml-auto">
-            {/* Elegant Sound Toggle Button */}
+          {/* Top Right: Essential Actions */}
+          <div className="flex gap-3 items-center pointer-events-auto">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -424,41 +443,12 @@ export default function LobbyPage() {
                 toggleMute();
                 addToast(!isMuted ? 'Sound Muted' : 'Sound Enabled', 'info');
               }}
-              className="glass-panel rounded-full p-2 text-slate-300 hover:text-white transition-all shadow-md opacity-90 flex items-center justify-center border border-slate-800 w-8 h-8 shrink-0"
+              className="bg-slate-900/60 hover:bg-slate-800/80 backdrop-blur-md border border-slate-700/50 rounded-xl w-10 h-10 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-lg"
               title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
             >
-              <span className="text-[12px]">{isMuted ? '🔇' : '🔊'}</span>
+              {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
             </motion.button>
 
-            {/* Premium Theme Switcher Toolbar Button */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                const themes: Array<'classic-green' | 'premium-blue' | 'dark-night'> = ['classic-green', 'premium-blue', 'dark-night'];
-                const currentIdx = themes.indexOf(tableTheme || 'premium-blue');
-                const nextIdx = (currentIdx + 1) % themes.length;
-                setTableTheme(themes[nextIdx]);
-                addToast(`Table theme: ${themes[nextIdx].replace('-', ' ').toUpperCase()}`, 'info');
-              }}
-              className="glass-panel rounded-full p-2 text-slate-300 hover:text-white transition-all shadow-md opacity-90 flex items-center justify-center border border-slate-800 w-8 h-8 shrink-0"
-              title="Change Table Style"
-            >
-              <span className="text-[12px]">🎨</span>
-            </motion.button>
-
-            {/* Minimalist Room Code Copy Circle */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleCopyCode}
-              className="glass-panel rounded-full p-2 text-slate-300 hover:text-white transition-all shadow-md opacity-90 flex items-center justify-center border border-slate-800 w-8 h-8 shrink-0"
-              title="Copy Room Code"
-            >
-              {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
-            </motion.button>
-
-            {/* Leave Table Button */}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -466,16 +456,16 @@ export default function LobbyPage() {
                 leaveRoom();
                 router.push('/');
               }}
-              className="glass-panel rounded-full p-2 hover:bg-red-950/20 border border-red-500/10 hover:border-red-500/30 text-red-400 hover:text-red-300 transition-all shadow-md flex items-center justify-center opacity-90 w-8 h-8 shrink-0"
+              className="bg-slate-900/60 hover:bg-red-950/40 backdrop-blur-md border border-slate-700/50 hover:border-red-500/30 rounded-xl w-10 h-10 flex items-center justify-center text-slate-300 hover:text-red-400 transition-all shadow-lg"
               title="Exit Table"
             >
-              <LogOut size={12} />
+              <LogOut size={16} />
             </motion.button>
           </div>
         </header>
 
         {/* HUD: Bottom Table Actions */}
-        <div className="absolute bottom-10 left-0 right-0 flex flex-col items-center z-20 pointer-events-none">
+        <div className="absolute top-16 left-0 right-0 flex flex-col items-center z-20 pointer-events-none">
           <div className="pointer-events-auto">
             {/* Display state alert banners */}
             <div className="flex flex-col items-center gap-1.5">
@@ -507,8 +497,8 @@ export default function LobbyPage() {
                 )
               ) : gameStatus === 'playing' ? (
                 isMyTurn ? (
-                  <span className="text-[10px] bg-emerald-950/90 border border-emerald-500/40 text-emerald-400 px-4 py-1.5 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.25)] font-black uppercase tracking-widest animate-pulse">
-                    🟢 Your Turn - Play Card or Draw
+                  <span className="text-[9px] bg-emerald-950/40 backdrop-blur-sm border border-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.1)] font-bold uppercase tracking-wider animate-pulse">
+                    Your Turn
                   </span>
                 ) : (
                   <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3 py-1 rounded-full shadow-md">
@@ -521,29 +511,25 @@ export default function LobbyPage() {
                 </span>
               ) : null}
 
-              {/* Declare UNO Button - Large when 1 card, normal when 2 cards */}
-              {(myHand.length === 2 || myHand.length === 1) && gameStatus === 'playing' && !isSpectator && (
+              {/* Declare UNO Button - Large when 1 card, normal when 2 cards. Disappears after declared. */}
+              {(myHand.length === 2 || myHand.length === 1) && gameStatus === 'playing' && !isSpectator && !(player && unoCalled[player.id]) && (
                 <motion.button
                   disabled={isProcessing}
                   whileHover={{ scale: myHand.length === 1 ? 1.12 : 1.08 }}
                   whileTap={{ scale: 0.92, y: 2 }}
-                  animate={myHand.length === 1 && !(player && unoCalled[player.id]) ? { scale: [1, 1.08, 1] } : {}}
-                  transition={myHand.length === 1 && !(player && unoCalled[player.id]) ? { repeat: Infinity, duration: 0.8, ease: 'easeInOut' } : undefined}
+                  animate={myHand.length === 1 ? { scale: [1, 1.08, 1] } : {}}
+                  transition={myHand.length === 1 ? { repeat: Infinity, duration: 0.8, ease: 'easeInOut' } : undefined}
                   onClick={() => {
                     setIsProcessing(true);
                     callUno();
                   }}
                   className={`mt-2 rounded-full font-black uppercase tracking-wider transition-all duration-300 border ${
                     myHand.length === 1
-                      ? player && unoCalled[player.id]
-                        ? 'px-8 py-3.5 text-base bg-gradient-to-r from-red-600 to-amber-600 border-red-500 text-white shadow-[0_0_30px_rgba(239,68,68,0.9)] animate-pulse'
-                        : 'px-8 py-3.5 text-base bg-gradient-to-r from-red-700 to-orange-600 border-red-400 text-white shadow-[0_0_25px_rgba(239,68,68,0.7)] hover:shadow-[0_0_40px_rgba(239,68,68,0.9)]'
-                      : player && unoCalled[player.id]
-                        ? 'px-3.5 py-1.5 text-[9px] bg-gradient-to-r from-red-600 to-amber-600 border-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.75)] animate-pulse'
-                        : 'px-3.5 py-1.5 text-[9px] bg-slate-900 border-slate-700 hover:border-red-500 hover:text-red-400 text-slate-300 shadow-md shadow-red-500/10'
+                      ? 'px-6 py-2.5 text-sm bg-gradient-to-r from-red-700 to-orange-600 border-red-400 text-white shadow-[0_0_25px_rgba(239,68,68,0.7)] hover:shadow-[0_0_40px_rgba(239,68,68,0.9)]'
+                      : 'px-3.5 py-1.5 text-[9px] bg-slate-900 border-slate-700 hover:border-red-500 hover:text-red-400 text-slate-300 shadow-md shadow-red-500/10'
                   }`}
                 >
-                  {player && unoCalled[player.id] ? '🔴 UNO Declared!' : myHand.length === 1 ? '🚨 PRESS UNO!' : '📣 Declare UNO!'}
+                  {myHand.length === 1 ? '🚨 PRESS UNO!' : '📣 Declare UNO!'}
                 </motion.button>
               )}
 
@@ -724,6 +710,9 @@ export default function LobbyPage() {
           </div>
         </div>
       )}
+
+      {/* GAME EFFECTS LAYER */}
+      <TurnGlowIndicator />
 
     </div>
   );

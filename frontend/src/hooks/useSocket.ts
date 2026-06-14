@@ -68,15 +68,21 @@ export const useSocket = () => {
         soundManager.play('card_play');
       }
 
+      let drawSoundPlayed = false;
       for (const player of playersList) {
         const seat = player.seatNumber;
         const oldHand: CardItem[] = state.playerCards[seat] || [];
         const newHand: CardItem[] = payload.hands[seat] || [];
         
-        if (newHand.length > oldHand.length) {
+        if (newHand.length > oldHand.length && !drawSoundPlayed) {
           // Play sound if local player or others draw
           soundManager.play('card_draw');
-          break; // One sound is enough even if multiple players draw
+          drawSoundPlayed = true;
+        }
+
+        // Check if UNO was just called
+        if (payload.unoCalled && payload.unoCalled[player.id] && (!state.unoCalled || !state.unoCalled[player.id])) {
+          soundManager.play('uno');
         }
       }
 
