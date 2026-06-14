@@ -45,6 +45,41 @@ const drawCardsHelper = (state: UnoGameState, count: number, recipientId: string
 };
 
 /**
+ * Validates a 7-card opening hand according to smart shuffle rules:
+ * - No more than 4 cards of the same color
+ * - No more than 3 action cards
+ * - No more than 2 wild cards
+ * - At least 2 unique playable colors (if not primarily wilds)
+ */
+const isValidOpeningHand = (hand: CardItem[]): boolean => {
+  const colorCounts: Record<string, number> = { red: 0, blue: 0, green: 0, yellow: 0, wild: 0 };
+  let actionCount = 0;
+  let wildCount = 0;
+
+  for (const card of hand) {
+    if (card.color !== 'wild') {
+      colorCounts[card.color]++;
+    }
+    if (card.value === 'skip' || card.value === 'reverse' || card.value === 'draw_two') {
+      actionCount++;
+    }
+    if (card.color === 'wild') {
+      wildCount++;
+    }
+  }
+
+  if (wildCount > 2) return false;
+  if (actionCount > 3) return false;
+  if (Math.max(colorCounts.red, colorCounts.blue, colorCounts.green, colorCounts.yellow) > 4) return false;
+
+  const uniqueColors = Object.keys(colorCounts).filter(c => c !== 'wild' && colorCounts[c] > 0).length;
+  // A hand should have at least 2 colors, unless it is mostly wilds (but wilds are max 2, so it always needs 2 colors)
+  if (uniqueColors < 2) return false;
+
+  return true;
+};
+
+/**
  * Initializes a new game state.
  * Deals 7 cards, reveals a valid starting card, and determines the first turn.
  */
@@ -53,26 +88,41 @@ export const startGameState = (players: Player[]): UnoGameState => {
     throw new Error('At least 2 players are required to start the game');
   }
 
-  // 1. Generate and shuffle deck
-  const deck = shuffleDeck(generateDeck());
-  const hands: Record<string, CardItem[]> = {};
+  // 1 & 2. Smart Shuffle (Rejection Sampling for perfectly random, balanced hands)
+  let deck: CardItem[] = [];
+  let hands: Record<string, CardItem[]> = {};
   const unoCalled: Record<string, boolean> = {};
 
   players.forEach((p) => {
-    hands[p.id] = [];
     unoCalled[p.id] = false;
   });
 
-  // 2. Deal 7 cards to each player
-  players.forEach((p) => {
-    for (let i = 0; i < 7; i++) {
-      hands[p.id].push(deck.pop()!);
-    }
-  });
+  let validDeal = false;
+  let shuffleAttempts = 0;
 
-  // 3. Reveal first discard card (cannot be a Wild or Wild Draw Four)
+  while (!validDeal) {
+    shuffleAttempts++;
+    deck = shuffleDeck(generateDeck());
+    hands = {};
+    validDeal = true;
+
+    players.forEach((p) => {
+      hands[p.id] = [];
+      for (let i = 0; i < 7; i++) {
+        hands[p.id].push(deck.pop()!);
+      }
+      
+      if (!isValidOpeningHand(hands[p.id])) {
+        validDeal = false;
+      }
+    });
+  }
+
+  console.log(`[Smart Shuffle] Found balanced deal after ${shuffleAttempts} attempts.`);
+
+  // 3. Reveal first discard card (cannot be Wild, Wild Draw Four, or Draw Two)
   let firstCardIndex = deck.length - 1;
-  while (firstCardIndex >= 0 && deck[firstCardIndex].color === 'wild') {
+  while (firstCardIndex >= 0 && (deck[firstCardIndex].color === 'wild' || deck[firstCardIndex].value === 'draw_two')) {
     firstCardIndex--;
   }
 
