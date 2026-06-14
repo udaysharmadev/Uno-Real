@@ -172,7 +172,9 @@ export default function LobbyPage() {
     startGame, 
     playCard, 
     chooseColor, 
-    callUno 
+    callUno,
+    catchUno,
+    drawCard 
   } = useSocket();
 
   const { 
@@ -519,25 +521,54 @@ export default function LobbyPage() {
                 </span>
               ) : null}
 
-              {/* Declare UNO Button (Moved from footer) */}
+              {/* Declare UNO Button - Large when 1 card, normal when 2 cards */}
               {(myHand.length === 2 || myHand.length === 1) && gameStatus === 'playing' && !isSpectator && (
                 <motion.button
                   disabled={isProcessing}
-                  whileHover={{ scale: 1.08 }}
+                  whileHover={{ scale: myHand.length === 1 ? 1.12 : 1.08 }}
                   whileTap={{ scale: 0.92, y: 2 }}
+                  animate={myHand.length === 1 && !(player && unoCalled[player.id]) ? { scale: [1, 1.08, 1] } : {}}
+                  transition={myHand.length === 1 && !(player && unoCalled[player.id]) ? { repeat: Infinity, duration: 0.8, ease: 'easeInOut' } : undefined}
                   onClick={() => {
                     setIsProcessing(true);
                     callUno();
                   }}
-                  className={`mt-2 px-3.5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all duration-300 border ${
-                    player && unoCalled[player.id]
-                      ? 'bg-gradient-to-r from-red-600 to-amber-600 border-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.75)] animate-pulse'
-                      : 'bg-slate-900 border-slate-700 hover:border-red-500 hover:text-red-400 text-slate-300 shadow-md shadow-red-500/10'
+                  className={`mt-2 rounded-full font-black uppercase tracking-wider transition-all duration-300 border ${
+                    myHand.length === 1
+                      ? player && unoCalled[player.id]
+                        ? 'px-8 py-3.5 text-base bg-gradient-to-r from-red-600 to-amber-600 border-red-500 text-white shadow-[0_0_30px_rgba(239,68,68,0.9)] animate-pulse'
+                        : 'px-8 py-3.5 text-base bg-gradient-to-r from-red-700 to-orange-600 border-red-400 text-white shadow-[0_0_25px_rgba(239,68,68,0.7)] hover:shadow-[0_0_40px_rgba(239,68,68,0.9)]'
+                      : player && unoCalled[player.id]
+                        ? 'px-3.5 py-1.5 text-[9px] bg-gradient-to-r from-red-600 to-amber-600 border-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.75)] animate-pulse'
+                        : 'px-3.5 py-1.5 text-[9px] bg-slate-900 border-slate-700 hover:border-red-500 hover:text-red-400 text-slate-300 shadow-md shadow-red-500/10'
                   }`}
                 >
-                  {player && unoCalled[player.id] ? '🔴 UNO Declared!' : '📣 Declare UNO!'}
+                  {player && unoCalled[player.id] ? '🔴 UNO Declared!' : myHand.length === 1 ? '🚨 PRESS UNO!' : '📣 Declare UNO!'}
                 </motion.button>
               )}
+
+              {/* Catch UNO Buttons - Show for opponents with 1 card who haven't called UNO */}
+              {gameStatus === 'playing' && !isSpectator && room && room.players
+                .filter(p => p.id !== player?.id && playerCards[p.seatNumber]?.length === 1 && !unoCalled[p.id])
+                .map(targetPlayer => (
+                  <motion.button
+                    key={`catch-${targetPlayer.id}`}
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
+                    animate={{ scale: [1, 1.06, 1] }}
+                    transition={{ repeat: Infinity, duration: 1, ease: 'easeInOut' }}
+                    disabled={isProcessing}
+                    onClick={() => {
+                      setIsProcessing(true);
+                      catchUno(targetPlayer.id);
+                      addToast(`Caught ${targetPlayer.name} not calling UNO! +2 penalty cards`, 'success');
+                    }}
+                    className="mt-1.5 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-600 to-orange-600 border border-amber-400/50 text-white shadow-[0_0_15px_rgba(245,158,11,0.5)] hover:shadow-[0_0_25px_rgba(245,158,11,0.7)] transition-all"
+                  >
+                    🚨 Catch {targetPlayer.name}&apos;s UNO!
+                  </motion.button>
+                ))
+              }
             </div>
           </div>
         </div>

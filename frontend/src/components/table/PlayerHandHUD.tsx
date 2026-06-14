@@ -7,10 +7,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../../hooks/useSocket';
 
 export const PlayerHandHUD: React.FC = () => {
-  const { room, player, currentPlayerId, playerCards, isProcessing } = useGameStore();
+  const { room, player, currentPlayerId, playerCards, isProcessing, gameStatus } = useGameStore();
   const { playCard } = useSocket();
 
+  // Hide hand when game is not active or has ended
   if (!room || !player || !['playing', 'awaiting_color_selection'].includes(room.status)) {
+    return null;
+  }
+  if (gameStatus === 'ended') {
     return null;
   }
 
