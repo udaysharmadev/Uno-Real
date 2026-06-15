@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+
 import { useGameStore } from '../../store/useGameStore';
 import { PhysicalCard } from '../cards/PhysicalCard';
 
@@ -54,10 +55,8 @@ export const CinematicSharedTopCard: React.FC = () => {
     // Camera looks toward -Z. Face pointing toward -Z means face points AWAY from camera.
     // Face pointing toward +Z means face points TOWARD camera.
     // rotation.x = +PI/2: +Y → +Z (toward camera). SHOULD show front.
-    // But user reports seeing BACK. So either: material[2] renders as back visually,
-    // or the rotation actually works opposite to math.
     // PRAGMATIC FIX: try -PI/2 (the opposite). If +PI/2 shows back, -PI/2 shows front.
-    const endRotX = Math.PI / 2 - 0.25; // +PI/2 rotates +Y (front) to face +Z (camera), with slight tilt
+    const endRotX = Math.PI / 2 - 0.1; // ~5 degree tilt backward
     const endY = 0.25; // Move up a bit more to accommodate larger scale
     const baseScale = 2.0; // ~1.3x larger than previous 1.5
     const endScale = tapped ? 3.0 : baseScale;
@@ -82,8 +81,6 @@ export const CinematicSharedTopCard: React.FC = () => {
 
   return (
     <group ref={groupRef}>
-      {/* Illuminate the face (+Y) of the card gently so it isn't washed out */}
-      <pointLight position={[0, 0.5, 0]} intensity={0.6} distance={1.5} decay={2} color="#ffffff" />
       <PhysicalCard
         color={activeCard.color as any}
         value={activeCard.value}

@@ -10,6 +10,7 @@ export interface PhysicalCardProps {
   rotation: [number, number, number];
   animateSpawn?: 'drop' | 'none' | 'deal';
   onClick?: () => void;
+  blankFace?: boolean;
 }
 
 const canvasCache: Record<string, { front: HTMLCanvasElement, back: HTMLCanvasElement }> = {};
@@ -64,11 +65,11 @@ const getCardCanvases = (color: string, value: string) => {
   const fctx = frontCanvas.getContext('2d');
   if (fctx) {
     const colorMap: Record<string, string> = {
-      red: '#D32F2F',    // Deep UNO red
-      blue: '#1976D2',   // Deep UNO blue
-      green: '#388E3C',  // Deep UNO green
-      yellow: '#FBC02D', // Deep UNO yellow
-      wild: '#111111',   // Near black
+      red: '#ef4444',    // Tailwind red-500
+      blue: '#3b82f6',   // Tailwind blue-500
+      green: '#22c55e',  // Tailwind green-500
+      yellow: '#eab308', // Tailwind yellow-500
+      wild: '#171717',   // Tailwind neutral-900
     };
     
     fctx.fillStyle = '#ffffff';
@@ -148,6 +149,7 @@ export const PhysicalCard: React.FC<PhysicalCardProps> = ({
   rotation,
   animateSpawn = 'none',
   onClick,
+  blankFace = false,
 }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const targetPos = useMemo(() => new THREE.Vector3(...position), [position]);
@@ -203,10 +205,14 @@ export const PhysicalCard: React.FC<PhysicalCardProps> = ({
       bumpMap: bumpMap,
       bumpScale: 0.0003,       // Extremely subtle texture only visible in light
     };
-
     const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.1 });
-    const frontMaterial = new THREE.MeshPhysicalMaterial({ map: frontTex, ...premiumCardStock });
-    const backMaterial = new THREE.MeshPhysicalMaterial({ map: backTex, ...premiumCardStock });
+    const frontMaterial = blankFace 
+      ? new THREE.MeshBasicMaterial({ color: 0x111111 })
+      : new THREE.MeshBasicMaterial({ map: frontTex, toneMapped: false });
+    const backMaterial = new THREE.MeshBasicMaterial({ 
+      map: backTex,
+      toneMapped: false
+    });
 
     return [
       edgeMaterial,  // +x

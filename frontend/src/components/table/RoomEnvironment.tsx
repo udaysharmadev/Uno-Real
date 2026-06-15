@@ -264,15 +264,15 @@ function HangingLamp({ isLandingPage }: { isLandingPage?: boolean }) {
   return (
     <group ref={lampGroupRef}>
       {/* Ceiling mount */}
-      <mesh position={[0, 2.2, 0]}>
+      <mesh position={[0, 3.98, 0]}>
         <cylinderGeometry args={[0.06, 0.08, 0.04, 16]} />
         <meshStandardMaterial color="#0a0a0a" roughness={0.8} />
       </mesh>
 
       {/* Cable */}
-      <mesh position={[0, 1.85, 0]}>
-        <cylinderGeometry args={[0.006, 0.006, 0.7, 8]} />
-        <meshStandardMaterial color="#050505" roughness={0.9} />
+      <mesh position={[0, 2.75, 0]}>
+        <cylinderGeometry args={[0.006, 0.006, 2.5, 8]} />
+        <meshStandardMaterial color="#111111" roughness={0.7} metalness={0.2} />
       </mesh>
 
       {/* Shade */}
@@ -309,7 +309,184 @@ function HangingLamp({ isLandingPage }: { isLandingPage?: boolean }) {
       <pointLight position={[0, 1.58, 0]} intensity={2.0} color="#ffb040" distance={2.5} decay={2} />
 
       {/* Front Fill Light for Player Cards */}
-      <pointLight position={[0, 1.8, 2.8]} intensity={1.5} color="#ffffff" distance={5} decay={2} />
+      <pointLight position={[0, 1.8, 2.8]} intensity={15.0} color="#ffffff" distance={8} decay={1.5} />
+    </group>
+  );
+}
+
+function RoomProps() {
+  return (
+    <group>
+      {/* Dim ambient light to make the room subtly visible */}
+      <ambientLight intensity={0.4} color="#ffffff" />
+      {/* A dim point light high up to wash the walls and roof */}
+      <pointLight position={[0, 2.5, 0]} intensity={6.0} color="#ffddaa" distance={15} decay={1.5} />
+
+      {/* Roof */}
+      <mesh position={[0, 4.0, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[20, 20]} />
+        <meshStandardMaterial color="#3d2f26" roughness={1.0} />
+      </mesh>
+
+      {/* Back Wall & Props */}
+      <group position={[0, 0, -4.5]}>
+        {/* Wall */}
+        <mesh position={[0, 2.5, -0.1]} receiveShadow>
+          <planeGeometry args={[20, 10]} />
+          <meshStandardMaterial color="#4a3b32" roughness={1.0} />
+        </mesh>
+        
+        {/* Wooden Shelf */}
+        <mesh position={[0, 1.8, 0]} castShadow receiveShadow>
+          <boxGeometry args={[3, 0.05, 0.4]} />
+          <meshStandardMaterial color="#5c3a21" roughness={0.9} />
+        </mesh>
+        {/* Shelf Brackets */}
+        <mesh position={[-1.2, 1.65, -0.05]} castShadow receiveShadow>
+          <boxGeometry args={[0.04, 0.3, 0.3]} />
+          <meshStandardMaterial color="#2a1f1a" roughness={0.8} />
+        </mesh>
+        <mesh position={[1.2, 1.65, -0.05]} castShadow receiveShadow>
+          <boxGeometry args={[0.04, 0.3, 0.3]} />
+          <meshStandardMaterial color="#2a1f1a" roughness={0.8} />
+        </mesh>
+
+        {/* Old Books */}
+        <mesh position={[-1.0, 1.95, 0]} rotation={[0, 0, 0.1]} castShadow>
+          <boxGeometry args={[0.08, 0.25, 0.2]} />
+          <meshStandardMaterial color="#3a1c1c" roughness={0.9} />
+        </mesh>
+        <mesh position={[-0.9, 1.94, 0]} castShadow>
+          <boxGeometry args={[0.06, 0.24, 0.22]} />
+          <meshStandardMaterial color="#1c243a" roughness={0.9} />
+        </mesh>
+        <mesh position={[-0.82, 1.95, 0]} castShadow>
+          <boxGeometry args={[0.07, 0.26, 0.19]} />
+          <meshStandardMaterial color="#243a1c" roughness={0.9} />
+        </mesh>
+
+        {/* Small Storage / Card Game Boxes */}
+        <mesh position={[0.5, 1.88, 0]} rotation={[0, -0.2, 0]} castShadow>
+          <boxGeometry args={[0.3, 0.1, 0.2]} />
+          <meshStandardMaterial color="#333333" roughness={0.8} />
+        </mesh>
+        <mesh position={[0.55, 1.98, 0]} rotation={[0, 0.1, 0]} castShadow>
+          <boxGeometry args={[0.2, 0.08, 0.15]} />
+          <meshStandardMaterial color="#3a1818" roughness={0.7} />
+        </mesh>
+      </group>
+
+      {/* Side Wall & Props (Right Side) */}
+      <group position={[4.5, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+        {/* Wall */}
+        <mesh position={[0, 2.5, -0.1]} receiveShadow>
+          <planeGeometry args={[20, 10]} />
+          <meshStandardMaterial color="#4a3b32" roughness={1.0} />
+        </mesh>
+
+        {/* Framed Vintage Poster */}
+        <group position={[-1, 2.0, 0.02]}>
+          {/* Frame */}
+          <mesh position={[0, 0, 0]} castShadow>
+            <boxGeometry args={[0.9, 1.3, 0.04]} />
+            <meshStandardMaterial color="#2a1a10" roughness={0.8} />
+          </mesh>
+          {/* Canvas/Poster Image Area */}
+          <mesh position={[0, 0, 0.022]}>
+            <planeGeometry args={[0.8, 1.2]} />
+            <meshStandardMaterial color="#140a05" roughness={0.9} />
+          </mesh>
+        </group>
+
+        {/* Wall Clock */}
+        <group position={[1.5, 2.5, 0]}>
+          <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.3, 0.3, 0.05, 32]} />
+            <meshStandardMaterial color="#0a0a0a" roughness={0.8} />
+          </mesh>
+          {/* Clock Face */}
+          <mesh position={[0, 0, 0.026]}>
+            <circleGeometry args={[0.26, 32]} />
+            <meshStandardMaterial color="#1a1816" roughness={0.9} />
+          </mesh>
+        </group>
+
+        {/* Coat Hook */}
+        <group position={[1.5, 1.5, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.05, 0.1, 0.02]} />
+            <meshStandardMaterial color="#1a1a1a" roughness={0.6} metalness={0.5} />
+          </mesh>
+          <mesh position={[0, 0.02, 0.05]} castShadow rotation={[-0.2, 0, 0]}>
+            <cylinderGeometry args={[0.01, 0.01, 0.1, 8]} />
+            <meshStandardMaterial color="#1a1a1a" roughness={0.6} metalness={0.5} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* Left Wall to enclose the room */}
+      <group position={[-4.5, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[0, 2.5, -0.1]} receiveShadow>
+          <planeGeometry args={[20, 10]} />
+          <meshStandardMaterial color="#4a3b32" roughness={1.0} />
+        </mesh>
+      </group>
+
+      {/* Corner Props (Back Left Corner) */}
+      <group position={[-3.5, 0, -3.5]} rotation={[0, Math.PI / 4, 0]}>
+        {/* Standing Lamp (Off) */}
+        <group position={[-0.5, 0, -0.5]}>
+          <mesh position={[0, 0.02, 0]} castShadow>
+            <cylinderGeometry args={[0.2, 0.25, 0.04, 16]} />
+            <meshStandardMaterial color="#050505" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 0.8, 0]} castShadow>
+            <cylinderGeometry args={[0.02, 0.02, 1.6, 8]} />
+            <meshStandardMaterial color="#0a0a0a" roughness={0.6} metalness={0.8} />
+          </mesh>
+          <mesh position={[0, 1.6, 0]} castShadow>
+            <cylinderGeometry args={[0.15, 0.25, 0.3, 16]} />
+            <meshStandardMaterial color="#0a0a0a" roughness={0.9} />
+          </mesh>
+        </group>
+
+        {/* Small Cabinet */}
+        <mesh position={[0.5, 0.4, 0.2]} castShadow receiveShadow>
+          <boxGeometry args={[0.8, 0.8, 0.5]} />
+          <meshStandardMaterial color="#3a2518" roughness={0.9} />
+        </mesh>
+
+        {/* Chair */}
+        <group position={[-0.5, 0, 0.8]} rotation={[0, -0.3, 0]}>
+          {/* Seat */}
+          <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.4, 0.04, 0.4]} />
+            <meshStandardMaterial color="#0a0502" roughness={0.8} />
+          </mesh>
+          {/* Backrest */}
+          <mesh position={[0, 0.75, -0.18]} castShadow receiveShadow>
+            <boxGeometry args={[0.35, 0.3, 0.04]} />
+            <meshStandardMaterial color="#0a0502" roughness={0.8} />
+          </mesh>
+          {/* Legs */}
+          <mesh position={[-0.16, 0.225, 0.16]} castShadow>
+            <boxGeometry args={[0.04, 0.45, 0.04]} />
+            <meshStandardMaterial color="#050201" roughness={0.9} />
+          </mesh>
+          <mesh position={[0.16, 0.225, 0.16]} castShadow>
+            <boxGeometry args={[0.04, 0.45, 0.04]} />
+            <meshStandardMaterial color="#050201" roughness={0.9} />
+          </mesh>
+          <mesh position={[-0.16, 0.4, -0.16]} castShadow>
+            <boxGeometry args={[0.04, 0.8, 0.04]} />
+            <meshStandardMaterial color="#050201" roughness={0.9} />
+          </mesh>
+          <mesh position={[0.16, 0.4, -0.16]} castShadow>
+            <boxGeometry args={[0.04, 0.8, 0.04]} />
+            <meshStandardMaterial color="#050201" roughness={0.9} />
+          </mesh>
+        </group>
+      </group>
     </group>
   );
 }
@@ -325,13 +502,15 @@ function Scene({ numPlayers, localIndex, isLandingPage, children }: RoomEnvironm
         maxPolarAngle={Math.PI / 2.2} // Keep camera strictly above table horizon
         minAzimuthAngle={-Math.PI / 3}
         maxAzimuthAngle={Math.PI / 3}
+        minDistance={1.5}
+        maxDistance={4.0}
         enableDamping={true}
         dampingFactor={0.03}
       />
-      <fog attach="fog" args={['#080402', 6, 35]} />
+      <fog attach="fog" args={['#080402', 15, 50]} />
       
       {/* Dim ambient room visibility (deep dark blue/brown) */}
-      <hemisphereLight args={['#120a05', '#050201', 0.15]} />
+      <hemisphereLight args={['#18120c', '#080402', 0.8]} />
 
       {/* Under-table bounce light for table legs */}
       <pointLight position={[0, 0.4, 0]} intensity={30} color="#ffaa55" distance={5} decay={2} castShadow />
@@ -339,6 +518,7 @@ function Scene({ numPlayers, localIndex, isLandingPage, children }: RoomEnvironm
       <Floor />
       <GameTable />
       <HangingLamp isLandingPage={isLandingPage} />
+      <RoomProps />
       {children}
     </>
   );

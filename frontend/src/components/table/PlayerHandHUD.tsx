@@ -3,6 +3,7 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { HtmlCard } from '../cards/HtmlCard';
 
 import { useSocket } from '../../hooks/useSocket';
 
@@ -24,33 +25,6 @@ export const PlayerHandHUD: React.FC = () => {
 
   // Render a CSS replica of an UNO card
   const renderCard = (card: any, idx: number) => {
-    // Determine card colors
-    const colorMap: Record<string, string> = {
-      red: 'bg-red-500',
-      blue: 'bg-blue-500',
-      green: 'bg-green-500',
-      yellow: 'bg-yellow-500',
-      wild: 'bg-neutral-900',
-    };
-    
-    const bgColor = colorMap[card.color] || 'bg-white';
-    const textColorMap: Record<string, string> = {
-      red: 'text-red-500',
-      blue: 'text-blue-500',
-      green: 'text-green-500',
-      yellow: 'text-yellow-500',
-      wild: 'text-black',
-    };
-    const textColor = card.color === 'wild' ? 'text-black' : textColorMap[card.color] || 'text-black';
-
-    // Format display value
-    let displayVal = card.value;
-    if (displayVal === 'draw_two') displayVal = '+2';
-    if (displayVal === 'wild_draw_four') displayVal = '+4';
-    if (displayVal === 'skip') displayVal = '⊘';
-    if (displayVal === 'reverse') displayVal = '⇄';
-    if (displayVal === 'wild') displayVal = 'W';
-
     // Calculate elegant fan transform
     // Max fan angle based on hand size
     const maxAngle = Math.min(32, cardCount * 2.5);
@@ -88,30 +62,7 @@ export const PlayerHandHUD: React.FC = () => {
           ${isMyTurn ? 'cursor-pointer hover:shadow-2xl' : 'opacity-80 cursor-not-allowed'}
           transition-shadow duration-200 ease-out`}
       >
-        {/* Card Border & Shadow */}
-        <div className="w-full h-full bg-white rounded-lg sm:rounded-xl shadow-xl flex items-center justify-center p-1 border border-gray-200">
-          {/* Card Inner Background */}
-          <div className={`w-full h-full rounded sm:rounded-lg ${bgColor} relative overflow-hidden flex flex-col items-center justify-center border border-black/10`}>
-            
-            {/* Top Left Mini Value */}
-            <div className="absolute top-1 left-1.5 text-white font-bold text-xs sm:text-sm drop-shadow-md">
-              {displayVal}
-            </div>
-
-            {/* Bottom Right Mini Value */}
-            <div className="absolute bottom-1 right-1.5 text-white font-bold text-xs sm:text-sm drop-shadow-md rotate-180">
-              {displayVal}
-            </div>
-
-            {/* Center Oval */}
-            <div className="w-[85%] h-[60%] bg-white rounded-full shadow-inner flex items-center justify-center -rotate-12 border-2 sm:border-4 border-black/5">
-              <span className={`font-black text-xl sm:text-2xl md:text-3xl ${textColor} drop-shadow-sm`}>
-                {displayVal}
-              </span>
-            </div>
-            
-          </div>
-        </div>
+        <HtmlCard color={card.color} value={card.value} />
       </motion.div>
     );
   };
