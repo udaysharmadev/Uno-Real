@@ -134,7 +134,7 @@ export const useSocket = () => {
       setIsSpectator(!!isSpectator);
       setError(null);
       setIsProcessing(false);
-      addToast(isSpectator ? '⚡ Seated as Spectator' : `👋 Joined as ${player?.name}`, 'success');
+      addToast(isSpectator ? 'Seated as Spectator' : `Joined as ${player?.name}`, 'success');
     });
 
     socketInstance.off('lobby-updated');
@@ -165,6 +165,19 @@ export const useSocket = () => {
       console.log('[Socket] Game ended. Winner:', winnerName);
       soundManager.play('victory');
       setIsProcessing(false);
+    });
+
+    socketInstance.off('game-stopped');
+    socketInstance.on('game-stopped', ({ room }) => {
+      console.log('[Socket] Game stopped — not enough players. Resetting to lobby.');
+      // Reset all card/game state back to the lobby. A fresh game must be started.
+      useGameStore.getState().clearAllCards();
+      if (room) {
+        setRoom(room);
+      }
+      useGameStore.getState().setGameStoppedNotice(true);
+      setIsProcessing(false);
+      // No toast here — the on-table "Game Stopped" banner conveys this instead.
     });
 
     socketInstance.off('error');
@@ -198,7 +211,7 @@ export const useSocket = () => {
       console.log('[Socket] Player joined:', newPlayer?.name);
       soundManager.play('player_join');
       if (newPlayer && newPlayer.name) {
-        addToast(`👋 ${newPlayer.name} joined the table!`, 'success');
+        addToast(`${newPlayer.name} joined the table!`, 'success');
       }
     });
 
@@ -207,7 +220,7 @@ export const useSocket = () => {
       console.log('[Socket] Player left:', leftPlayer?.name);
       soundManager.play('player_leave');
       if (leftPlayer && leftPlayer.name) {
-        addToast(`🚪 ${leftPlayer.name} left the table.`, 'info');
+        addToast(`${leftPlayer.name} left the table.`, 'info');
       }
     });
 
@@ -216,7 +229,7 @@ export const useSocket = () => {
       console.log('[Socket] Spectator joined:', name);
       soundManager.play('player_join');
       if (name) {
-        addToast(`⚡ ${name} is now spectating.`, 'info');
+        addToast(`${name} is now spectating.`, 'info');
       }
     });
 
@@ -225,7 +238,7 @@ export const useSocket = () => {
       console.log('[Socket] Spectator left:', name);
       soundManager.play('player_leave');
       if (name) {
-        addToast(`⚡ ${name} stopped spectating.`, 'info');
+        addToast(`${name} stopped spectating.`, 'info');
       }
     });
 
@@ -252,6 +265,7 @@ export const useSocket = () => {
       socketInstance.off('game-started');
       socketInstance.off('game-updated');
       socketInstance.off('game-ended');
+      socketInstance.off('game-stopped');
       socketInstance.off('error');
       socketInstance.off('player-reacted');
       socketInstance.off('player-joined');

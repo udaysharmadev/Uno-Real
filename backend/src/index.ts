@@ -429,8 +429,8 @@ io.on('connection', (socket) => {
 
     const tempRoomCode = currentRoomCode;
     const graceInfo = roomManager.startDisconnectGracePeriod(socket.id, tempRoomCode, (result) => {
-      const { room: updatedRoom, leftPlayer, leftSpectator } = result;
-      
+      const { room: updatedRoom, leftPlayer, leftSpectator, gameStopped } = result;
+
       if (leftPlayer) {
         console.log(`[Socket] Disconnect grace period expired. Player ${leftPlayer.name} left room ${tempRoomCode}`);
         io.to(tempRoomCode).emit('player-left', leftPlayer);
@@ -440,6 +440,11 @@ io.on('connection', (socket) => {
       }
 
       if (updatedRoom) {
+        // Game was stopped because too few players remain — tell clients to reset to lobby
+        if (gameStopped) {
+          console.log(`[Socket] Game stopped in room ${tempRoomCode} (not enough players).`);
+          io.to(tempRoomCode).emit('game-stopped', { room: updatedRoom });
+        }
         io.to(tempRoomCode).emit('lobby-updated', updatedRoom);
         if (updatedRoom.status === 'playing') {
           broadcastGameState(tempRoomCode);
@@ -460,7 +465,7 @@ io.on('connection', (socket) => {
 
     const result = roomManager.leaveRoom(socket.id);
     if (result) {
-      const { room: updatedRoom, leftPlayer, leftSpectator } = result;
+      const { room: updatedRoom, leftPlayer, leftSpectator, gameStopped } = result;
       if (leftPlayer) {
         console.log(`[Socket] Player ${leftPlayer.name} left room ${currentRoomCode}`);
         socket.to(currentRoomCode).emit('player-left', leftPlayer);
@@ -468,10 +473,15 @@ io.on('connection', (socket) => {
         console.log(`[Socket] Spectator ${leftSpectator.name} left room ${currentRoomCode}`);
         socket.to(currentRoomCode).emit('spectator-left', leftSpectator);
       }
-      
+
       socket.leave(currentRoomCode);
 
       if (updatedRoom) {
+        // Game was stopped because too few players remain — tell clients to reset to lobby
+        if (gameStopped) {
+          console.log(`[Socket] Game stopped in room ${currentRoomCode} (not enough players).`);
+          io.to(currentRoomCode).emit('game-stopped', { room: updatedRoom });
+        }
         // Broadcast the updated lobby to remaining players
         io.to(currentRoomCode).emit('lobby-updated', updatedRoom);
         if (updatedRoom.status === 'playing') {

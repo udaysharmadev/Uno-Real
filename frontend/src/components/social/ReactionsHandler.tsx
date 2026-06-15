@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Smile, Glasses } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
 import { getSeatCoords } from '../../utils/seating';
 import { useSocket } from '../../hooks/useSocket';
@@ -105,7 +106,7 @@ export const ReactionsHandler: React.FC = () => {
           onClick={() => setIsOpen(!isOpen)}
           className="pointer-events-auto glass-panel bg-slate-950/85 hover:bg-slate-900 border border-slate-800 rounded-full px-3.5 py-1.5 text-[10px] font-extrabold text-slate-300 hover:text-white transition-all shadow-lg flex items-center gap-1.5"
         >
-          <span>😀</span>
+          <Smile size={14} />
           <span className="uppercase tracking-wider">React</span>
         </motion.button>
       </div>
@@ -154,8 +155,8 @@ const ReactionBubble: React.FC<ReactionBubbleProps> = ({
         transition={{ duration: 2.2, ease: 'easeOut' }}
         className="absolute left-1/2 bottom-12 px-3.5 py-1.5 bg-slate-900/90 border border-slate-800 rounded-full shadow-2xl flex items-center gap-2"
       >
-        <span className="text-[9px] font-bold text-slate-400">
-          👓 Spectator {reaction.name}:
+        <span className="text-[9px] font-bold text-slate-400 inline-flex items-center gap-1">
+          <Glasses size={11} /> Spectator {reaction.name}:
         </span>
         <span className="text-base leading-none select-none">{reaction.emoji}</span>
       </motion.div>

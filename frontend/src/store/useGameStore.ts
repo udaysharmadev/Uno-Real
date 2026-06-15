@@ -29,6 +29,7 @@ interface GameState {
   winnerId: string | null;
   winnerName: string | null;
   unoCalled: Record<string, boolean>; // socketId -> boolean
+  gameStoppedNotice: boolean; // true when a game was just stopped due to too few players
   isSpectator: boolean;
   reactions: Array<{ id: string; name: string; seatNumber: number | null; emoji: string; isSpectator: boolean }>;
   toasts: Array<{ id: string; message: string; type: 'success' | 'error' | 'info' }>;
@@ -39,6 +40,7 @@ interface GameState {
   removeToast: (id: string) => void;
   setTableTheme: (theme: 'classic-green' | 'premium-blue' | 'dark-night') => void;
   toggleMute: () => void;
+  setGameStoppedNotice: (val: boolean) => void;
   
   setSocket: (socket: Socket | null) => void;
   setIsProcessing: (val: boolean) => void;
@@ -105,6 +107,7 @@ export const useGameStore = create<GameState>((set) => ({
   winnerId: null,
   winnerName: null,
   unoCalled: {},
+  gameStoppedNotice: false,
   isSpectator: false,
   reactions: [],
   toasts: [],
@@ -123,6 +126,7 @@ export const useGameStore = create<GameState>((set) => ({
     toasts: state.toasts.filter((t) => t.id !== id),
   })),
   setTableTheme: (tableTheme) => set({ tableTheme }),
+  setGameStoppedNotice: (gameStoppedNotice) => set({ gameStoppedNotice }),
   toggleMute: () => set((state) => {
     const nextMuted = !state.isMuted;
     soundManager.setEnabled(!nextMuted);
@@ -187,6 +191,7 @@ export const useGameStore = create<GameState>((set) => ({
     winnerId: null,
     winnerName: null,
     unoCalled: {},
+    gameStoppedNotice: false,
   }),
 
   setGameState: (payload) => {
@@ -204,6 +209,7 @@ export const useGameStore = create<GameState>((set) => ({
       winnerId: payload.winnerId,
       winnerName: payload.winnerName,
       unoCalled: payload.unoCalled,
+      gameStoppedNotice: false,
       isProcessing: false,
     }));
   },
@@ -231,6 +237,7 @@ export const useGameStore = create<GameState>((set) => ({
     winnerId: null,
     winnerName: null,
     unoCalled: {},
+    gameStoppedNotice: false,
   }),
 }));
 

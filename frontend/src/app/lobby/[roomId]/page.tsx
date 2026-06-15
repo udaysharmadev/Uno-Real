@@ -9,17 +9,33 @@ import { ReactionsHandler } from '../../../components/social/ReactionsHandler';
 import { getSeatCoords } from '../../../utils/seating';
 import { TurnGlowIndicator } from '../../../components/table/TurnGlowIndicator';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Copy, 
-  Check, 
-  LogOut, 
-  ShieldAlert, 
+import {
+  Copy,
+  Check,
+  LogOut,
+  ShieldAlert,
   Volume2,
   VolumeX,
   Mic,
   MicOff,
   Headphones,
-  Settings
+  Settings,
+  Pause,
+  X,
+  Trophy,
+  Star,
+  Megaphone,
+  Siren,
+  PartyPopper,
+  Medal,
+  Award,
+  RefreshCw,
+  Hourglass,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  Layers,
+  Play
 } from 'lucide-react';
 import { getCardColorHex, getCardValueLabel, isValidMove } from '../../../lib/cards/cardEngine';
 import { PlayerNameplates } from '../../../components/table/PlayerNameplates';
@@ -44,21 +60,21 @@ const PremiumLoader: React.FC<{ message: string; submessage?: string }> = ({ mes
           transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
           className="absolute w-14 h-20 bg-slate-900 border border-slate-800 rounded-xl shadow-lg transform -translate-x-3 rotate-[-8deg] origin-bottom-right flex items-center justify-center"
         >
-          <span className="text-blue-500/30 text-lg font-black">🂠</span>
+          <Layers size={20} className="text-blue-500/30" />
         </motion.div>
         <motion.div
           animate={{ rotate: [8, 0, 8] }}
           transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
           className="absolute w-14 h-20 bg-slate-900 border border-blue-500/30 rounded-xl shadow-2xl transform translate-x-3 rotate-[8deg] origin-bottom-left flex items-center justify-center"
         >
-          <span className="text-blue-400/80 text-lg font-black">🂠</span>
+          <Layers size={20} className="text-blue-400/80" />
         </motion.div>
         <motion.div
           animate={{ scale: [1, 1.05, 1] }}
           transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
           className="absolute w-14 h-20 bg-gradient-to-br from-red-600 to-red-700 border border-white/20 rounded-xl shadow-2xl flex items-center justify-center z-10"
         >
-          <span className="text-white text-xl font-black">🏆</span>
+          <Trophy size={22} className="text-white" />
         </motion.div>
       </div>
       
@@ -216,7 +232,9 @@ export default function LobbyPage() {
     tableTheme,
     setTableTheme,
     isMuted,
-    toggleMute
+    toggleMute,
+    gameStoppedNotice,
+    setGameStoppedNotice
   } = useGameStore();
 
   const { toggleMic } = useVoiceChat();
@@ -390,8 +408,12 @@ export default function LobbyPage() {
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold leading-tight select-none">
-                  {toast.type === 'error' ? '🚨' : toast.type === 'success' ? '✅' : 'ℹ️'}
+                <span className="shrink-0 leading-none select-none">
+                  {toast.type === 'error'
+                    ? <AlertTriangle size={15} />
+                    : toast.type === 'success'
+                      ? <CheckCircle2 size={15} />
+                      : <Info size={15} />}
                 </span>
                 <span className="font-rounded text-[11px] font-bold tracking-wide leading-tight">
                   {toast.message}
@@ -399,9 +421,9 @@ export default function LobbyPage() {
               </div>
               <button
                 onClick={() => removeToast(toast.id)}
-                className="text-white/70 hover:text-white transition-colors text-[10px] font-black uppercase ml-4"
+                className="text-white/70 hover:text-white transition-colors ml-4"
               >
-                ✕
+                <X size={13} />
               </button>
             </motion.div>
           ))}
@@ -437,10 +459,7 @@ export default function LobbyPage() {
           {room && (
             <div className="pointer-events-auto">
               <button
-                onClick={() => {
-                  handleCopyCode();
-                  addToast('Copied to clipboard', 'success');
-                }}
+                onClick={handleCopyCode}
                 className="group chip-arcade flex items-center gap-2.5 bg-gradient-to-b from-neutral-800 to-black px-4 py-2"
                 title="Copy Room Code"
               >
@@ -525,9 +544,9 @@ export default function LobbyPage() {
                         setIsProcessing(true);
                         startGame();
                       }}
-                      className="btn-arcade bg-gradient-to-b from-lime-400 to-green-600 text-white py-2.5 px-7 text-sm uppercase disabled:cursor-not-allowed"
+                      className="btn-arcade bg-gradient-to-b from-lime-400 to-green-600 text-white py-2.5 px-7 text-sm uppercase disabled:cursor-not-allowed inline-flex items-center gap-1.5"
                     >
-                      ▶ Start Game
+                      <Play size={15} className="fill-white" /> Start Game
                     </button>
                     {!canStart && (
                       <span className="font-rounded font-bold text-[10px] bg-black/85 border-2 border-white/30 text-yellow-300 px-3 py-1 rounded-full shadow-md">
@@ -542,8 +561,8 @@ export default function LobbyPage() {
                 )
               ) : gameStatus === 'playing' ? (
                 isMyTurn ? (
-                  <span className="font-arcade text-xs bg-gradient-to-b from-lime-400 to-green-600 border-[3px] border-white text-white px-4 py-1.5 rounded-full shadow-[0_4px_0_0_rgba(0,0,0,0.3)] uppercase tracking-wide animate-pulse">
-                    ⭐ Your Turn!
+                  <span className="font-arcade text-xs bg-gradient-to-b from-lime-400 to-green-600 border-[3px] border-white text-white px-4 py-1.5 rounded-full shadow-[0_4px_0_0_rgba(0,0,0,0.3)] uppercase tracking-wide animate-pulse inline-flex items-center gap-1.5">
+                    <Star size={14} className="fill-white" /> Your Turn!
                   </span>
                 ) : (
                   <span className="font-rounded font-bold text-[10px] bg-black/85 border-2 border-white/30 text-blue-300 px-3 py-1 rounded-full shadow-md">
@@ -567,13 +586,15 @@ export default function LobbyPage() {
                     setIsProcessing(true);
                     callUno();
                   }}
-                  className={`btn-arcade mt-2 text-white uppercase ${
+                  className={`btn-arcade mt-2 text-white uppercase inline-flex items-center gap-1.5 ${
                     myHand.length === 1
                       ? 'px-7 py-3 text-lg bg-gradient-to-b from-red-500 to-orange-600'
                       : 'px-4 py-2 text-[11px] bg-gradient-to-b from-red-500 to-red-700'
                   }`}
                 >
-                  {myHand.length === 1 ? '🚨 PRESS UNO!' : '📣 Declare UNO!'}
+                  {myHand.length === 1
+                    ? <><Siren size={18} /> PRESS UNO!</>
+                    : <><Megaphone size={14} /> Declare UNO!</>}
                 </motion.button>
               )}
 
@@ -592,9 +613,9 @@ export default function LobbyPage() {
                       catchUno(targetPlayer.id);
                       addToast(`Caught ${targetPlayer.name} not calling UNO! +2 penalty cards`, 'success');
                     }}
-                    className="btn-arcade mt-1.5 px-5 py-2 text-[11px] bg-gradient-to-b from-amber-400 to-orange-600 text-white uppercase"
+                    className="btn-arcade mt-1.5 px-5 py-2 text-[11px] bg-gradient-to-b from-amber-400 to-orange-600 text-white uppercase inline-flex items-center gap-1.5"
                   >
-                    🚨 Catch {targetPlayer.name}&apos;s UNO!
+                    <Siren size={14} /> Catch {targetPlayer.name}&apos;s UNO!
                   </motion.button>
                 ))
               }
@@ -603,6 +624,47 @@ export default function LobbyPage() {
         </div>
 
       </div>
+
+      {/* =================================================================== */}
+      {/* OVERLAYS: Game Stopped — Not Enough Players Banner                  */}
+      {/* =================================================================== */}
+      <AnimatePresence>
+        {gameStatus === 'lobby' && gameStoppedNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+            className="absolute top-28 left-1/2 -translate-x-1/2 z-30 pointer-events-auto w-[90%] max-w-md"
+          >
+            <div className="panel-arcade bg-gradient-to-b from-neutral-900 to-black px-6 py-5 flex flex-col items-center gap-3 text-center relative">
+              <button
+                onClick={() => setGameStoppedNotice(false)}
+                className="absolute top-2.5 right-2.5 chip-arcade w-7 h-7 flex items-center justify-center text-white bg-gradient-to-b from-rose-500 to-red-700"
+                title="Dismiss"
+              >
+                <X size={13} />
+              </button>
+              <div className="w-14 h-14 rounded-full bg-gradient-to-b from-amber-400 to-orange-600 border-4 border-white flex items-center justify-center text-white shadow-[0_4px_0_0_rgba(0,0,0,0.3)] animate-bounce">
+                <Pause size={26} className="fill-white" />
+              </div>
+              <h3 className="font-arcade text-xl uppercase tracking-wide text-yellow-400 arcade-stroke-uno-sm">
+                Game Stopped
+              </h3>
+              <p className="font-rounded font-semibold text-white/85 text-sm leading-snug">
+                Not enough players to keep playing. The table has been reset.
+              </p>
+              <p className="font-rounded font-bold text-[11px] uppercase tracking-wider text-cyan-200 animate-pulse">
+                {isHost
+                  ? canStart
+                    ? 'Press Start Game to play a fresh round!'
+                    : 'Waiting for another player to join…'
+                  : 'Waiting for the host to start a new game…'}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* =================================================================== */}
       {/* OVERLAYS: Color Selection Wheel Dialog                              */}
@@ -669,13 +731,14 @@ export default function LobbyPage() {
           <ConfettiCanvas />
 
           <div className="panel-arcade bg-gradient-to-b from-neutral-900 to-black p-7 flex flex-col items-center gap-5 max-w-sm w-full text-center z-20 relative">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-b from-yellow-300 to-amber-500 border-4 border-white flex items-center justify-center text-3xl shadow-[0_4px_0_0_rgba(0,0,0,0.3)] animate-bounce">
-              🏆
+            <div className="w-16 h-16 rounded-full bg-gradient-to-b from-yellow-300 to-amber-500 border-4 border-white flex items-center justify-center text-white shadow-[0_4px_0_0_rgba(0,0,0,0.3)] animate-bounce">
+              <Trophy size={30} className="fill-white/30" />
             </div>
             <div>
               <h2 className="font-arcade text-3xl uppercase tracking-wide text-yellow-400 arcade-stroke-uno-sm animate-pulse">Victory!</h2>
-              <p className="font-rounded font-bold text-white text-md mt-1">
-                {player && winnerName === player.name ? '🎉 YOU WON THE GAME!' : `🎉 ${winnerName} won the game!`}
+              <p className="font-rounded font-bold text-white text-md mt-1 inline-flex items-center gap-1.5">
+                <PartyPopper size={16} className="text-yellow-300" />
+                {player && winnerName === player.name ? 'YOU WON THE GAME!' : `${winnerName} won the game!`}
               </p>
             </div>
 
@@ -685,7 +748,8 @@ export default function LobbyPage() {
               {standings.map((entry, idx) => {
                 const rank = idx + 1;
                 const isWinner = rank === 1;
-                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+                const RankIcon = rank === 1 ? Trophy : rank === 2 ? Medal : Award;
+                const rankIconColor = rank === 1 ? 'text-yellow-300' : rank === 2 ? 'text-slate-300' : 'text-orange-400';
                 return (
                   <div
                     key={entry.id}
@@ -698,7 +762,9 @@ export default function LobbyPage() {
                     }`}
                   >
                     <div className="flex items-center gap-2 text-[11px] font-rounded font-bold">
-                      <span>{medal} #{rank}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <RankIcon size={14} className={rankIconColor} /> #{rank}
+                      </span>
                       <span className="font-arcade truncate max-w-[100px]">{entry.name}</span>
                     </div>
                     <span className="text-[10px] font-rounded font-semibold text-white/60">
@@ -718,13 +784,13 @@ export default function LobbyPage() {
                     setIsProcessing(true);
                     startGame();
                   }}
-                  className="btn-arcade w-full bg-gradient-to-b from-lime-400 to-green-600 text-white py-3 px-6 text-sm uppercase disabled:cursor-not-allowed"
+                  className="btn-arcade w-full bg-gradient-to-b from-lime-400 to-green-600 text-white py-3 px-6 text-sm uppercase disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
-                  🔄 Play Again
+                  <RefreshCw size={16} /> Play Again
                 </button>
               ) : (
-                <div className="w-full py-2.5 px-4 rounded-full bg-white/5 border-2 border-white/15 text-center animate-pulse font-rounded font-bold text-[10px] uppercase tracking-widest text-yellow-200">
-                  ⏳ Waiting for host to restart...
+                <div className="w-full py-2.5 px-4 rounded-full bg-white/5 border-2 border-white/15 text-center animate-pulse font-rounded font-bold text-[10px] uppercase tracking-widest text-yellow-200 inline-flex items-center justify-center gap-1.5">
+                  <Hourglass size={12} /> Waiting for host to restart...
                 </div>
               )}
 

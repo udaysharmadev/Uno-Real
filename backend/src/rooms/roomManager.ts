@@ -80,7 +80,7 @@ class RoomManager {
   public startDisconnectGracePeriod(
     socketId: string,
     roomCode: string,
-    onExpired: (result: { room: Room | null; leftPlayer: Player | null; leftSpectator: Spectator | null }) => void
+    onExpired: (result: { room: Room | null; leftPlayer: Player | null; leftSpectator: Spectator | null; gameStopped: boolean }) => void
   ): { playerName: string; isPlayer: boolean } | null {
     const upperCode = roomCode.toUpperCase();
     const room = this.rooms.get(upperCode);
@@ -110,7 +110,7 @@ class RoomManager {
       if (result) {
         onExpired(result);
       } else {
-        onExpired({ room: null, leftPlayer: null, leftSpectator: null });
+        onExpired({ room: null, leftPlayer: null, leftSpectator: null, gameStopped: false });
       }
     }, 60000);
 
@@ -269,13 +269,14 @@ class RoomManager {
   }
 
   // Remove player/spectator from whatever room they are in
-  public leaveRoom(playerSocketId: string): { room: Room | null; leftPlayer: Player | null; leftSpectator: Spectator | null } | null {
+  public leaveRoom(playerSocketId: string): { room: Room | null; leftPlayer: Player | null; leftSpectator: Spectator | null; gameStopped: boolean } | null {
     for (const [code, room] of this.rooms.entries()) {
       // Check players list
       const playerIndex = room.players.findIndex((p) => p.id === playerSocketId);
-      
+
       if (playerIndex !== -1) {
         const [leftPlayer] = room.players.splice(playerIndex, 1);
+        let gameStopped = false;
 
         // Cancel any active disconnect grace period timer for safety
         const timerKey = `${code.toUpperCase()}:${leftPlayer.name.toLowerCase()}`;
@@ -287,7 +288,8 @@ class RoomManager {
         console.log(`[ROOM_LEAVE] Player: ${leftPlayer.name}, Socket: ${playerSocketId}, Room: ${code}`);
 
         // Clean up game state if a game is active
-        if (room.game && room.players.length > 0) {
+        if (room.game && room.players.length >= 2) {
+          // Enough players remain — keep the game going.
           const game = room.game;
 
           // Remove the player's hand
@@ -310,10 +312,14 @@ class RoomManager {
               console.log(`[TURN_ADVANCED_ON_LEAVE] Next Player: ${room.players[nextIdx].name} (${room.players[nextIdx].id})`);
             }
           }
-        } else if (room.game && room.players.length === 0) {
-          // No players left, end the game
+        } else if (room.game) {
+          // Fewer than 2 players remain — stop the game, reset the table back to
+          // the lobby. A fresh game must be started from scratch once enough
+          // players have re-joined.
           room.game = undefined;
           room.status = 'lobby';
+          gameStopped = true;
+          console.log(`[GAME_STOPPED] Room ${code} dropped below 2 players. Game reset to lobby.`);
         }
 
         // If the player was the host and there are other players, elect a new host
@@ -322,17 +328,24 @@ class RoomManager {
           room.hostId = room.players[0].id;
         }
 
+        // The last remaining player always becomes the host (e.g. when a game is stopped).
+        if (room.players.length === 1 && !room.players[0].isHost) {
+          room.players[0].isHost = true;
+          room.hostId = room.players[0].id;
+          console.log(`[HOST_ASSIGNED] ${room.players[0].name} is now the host of room ${code}`);
+        }
+
         // If room is empty, delete it
         if (room.players.length === 0 && (!room.spectators || room.spectators.length === 0)) {
           console.log(`[ROOM_DELETED] Code: ${code}`);
           this.rooms.delete(code);
-          return { room: null, leftPlayer, leftSpectator: null };
+          return { room: null, leftPlayer, leftSpectator: null, gameStopped };
         }
 
         // Keep players sorted by seat number
         room.players.sort((a, b) => a.seatNumber - b.seatNumber);
 
-        return { room, leftPlayer, leftSpectator: null };
+        return { room, leftPlayer, leftSpectator: null, gameStopped };
       }
 
       // Check spectators list
@@ -353,10 +366,10 @@ class RoomManager {
           if (room.players.length === 0 && room.spectators.length === 0) {
             console.log(`[ROOM_DELETED] Code: ${code}`);
             this.rooms.delete(code);
-            return { room: null, leftPlayer: null, leftSpectator };
+            return { room: null, leftPlayer: null, leftSpectator, gameStopped: false };
           }
-          
-          return { room, leftPlayer: null, leftSpectator };
+
+          return { room, leftPlayer: null, leftSpectator, gameStopped: false };
         }
       }
     }
