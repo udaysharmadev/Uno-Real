@@ -15,9 +15,20 @@ import {
   LogOut, 
   ShieldAlert, 
   Volume2,
-  VolumeX
+  VolumeX,
+  Mic,
+  MicOff,
+  Headphones,
+  Settings
 } from 'lucide-react';
 import { getCardColorHex, getCardValueLabel, isValidMove } from '../../../lib/cards/cardEngine';
+import { PlayerNameplates } from '../../../components/table/PlayerNameplates';
+import { SettingsModal } from '../../../components/ui/SettingsModal';
+import { HelpModals } from '../../../components/ui/HelpModals';
+import { FPSCounter } from '../../../components/ui/FPSCounter';
+import { useVoiceChat } from '../../../hooks/useVoiceChat';
+import { useVoiceStore } from '../../../store/useVoiceStore';
+import { useSettingsStore } from '../../../store/useSettingsStore';
 
 // Premium Loader Component for elegant loading states
 const PremiumLoader: React.FC<{ message: string; submessage?: string }> = ({ message, submessage }) => {
@@ -207,6 +218,10 @@ export default function LobbyPage() {
     isMuted,
     toggleMute
   } = useGameStore();
+
+  const { toggleMic } = useVoiceChat();
+  const { isMicEnabled, isSpeakerEnabled, setSpeakerEnabled } = useVoiceStore();
+  const { setIsSettingsOpen } = useSettingsStore();
   
   const [copied, setCopied] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
@@ -345,6 +360,16 @@ export default function LobbyPage() {
       {/* Reactions Layer Overlay */}
       <ReactionsHandler />
 
+      {/* Voice Chat Player Nameplates */}
+      <PlayerNameplates />
+
+      {/* Premium Settings Modal */}
+      <SettingsModal />
+
+      {/* Help & Utility Modals */}
+      <HelpModals />
+      <FPSCounter />
+
 
 
       {/* Toast Notifications Container */}
@@ -440,13 +465,45 @@ export default function LobbyPage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
-                toggleMute();
-                addToast(!isMuted ? 'Sound Muted' : 'Sound Enabled', 'info');
+                toggleMic();
+              }}
+              className={`backdrop-blur-md border rounded-xl w-10 h-10 flex items-center justify-center transition-all shadow-lg ${
+                isMicEnabled 
+                  ? 'bg-green-950/60 border-green-500/50 text-green-400 hover:text-green-300' 
+                  : 'bg-red-950/60 border-red-900/50 text-red-500 hover:text-red-400'
+              }`}
+              title={isMicEnabled ? 'Mute Microphone' : 'Enable Microphone'}
+            >
+              {isMicEnabled ? <Mic size={16} /> : <MicOff size={16} />}
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setSpeakerEnabled(!isSpeakerEnabled);
+                addToast(!isSpeakerEnabled ? 'Voice Chat Enabled' : 'Voice Chat Muted', 'info');
+              }}
+              className={`backdrop-blur-md border rounded-xl w-10 h-10 flex items-center justify-center transition-all shadow-lg ${
+                isSpeakerEnabled 
+                  ? 'bg-slate-900/60 border-slate-700/50 text-slate-300 hover:text-white' 
+                  : 'bg-red-950/60 border-red-900/50 text-red-500 hover:text-red-400'
+              }`}
+              title={isSpeakerEnabled ? 'Mute Voice Chat' : 'Enable Voice Chat'}
+            >
+              <Headphones size={16} />
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setIsSettingsOpen(true);
               }}
               className="bg-slate-900/60 hover:bg-slate-800/80 backdrop-blur-md border border-slate-700/50 rounded-xl w-10 h-10 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-lg"
-              title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+              title="Settings"
             >
-              {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              <Settings size={16} className="text-slate-300" />
             </motion.button>
 
             <motion.button

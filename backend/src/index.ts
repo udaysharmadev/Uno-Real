@@ -236,6 +236,20 @@ io.on('connection', (socket) => {
     io.to(currentRoomCode).emit('player-reacted', { name, seatNumber, emoji, isSpectator });
   });
 
+  // WebRTC Signaling
+  socket.on('webrtc-signal', ({ targetId, signalData }: { targetId: string; signalData: any }) => {
+    // Relay the signal to the specific target socket
+    io.to(targetId).emit('webrtc-signal', { sourceId: socket.id, signalData });
+  });
+
+  // Voice Status Updates (e.g. mic muted)
+  socket.on('voice-status', ({ isMuted }: { isMuted: boolean }) => {
+    if (!currentRoomCode) return;
+    // Broadcast to everyone else in the room
+    socket.to(currentRoomCode).emit('voice-status-changed', { playerId: socket.id, isMuted });
+  });
+
+
   // Trigger game start (host only)
   socket.on('start-game', () => {
     if (!currentRoomCode) return;

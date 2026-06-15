@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { AnimatedCard } from './AnimatedCard';
 import { CardItem } from '../../lib/cards/cardEngine';
 
@@ -37,6 +38,7 @@ export const CardFlightAnimations: React.FC = () => {
   const playerCards = useGameStore((s) => s.playerCards);
   const discardPile = useGameStore((s) => s.discardPile);
   const gameStatus = useGameStore((s) => s.gameStatus);
+  const { cardAnimations } = useSettingsStore();
 
   const [flyingCards, setFlyingCards] = useState<FlyingCard[]>([]);
 
@@ -176,6 +178,8 @@ export const CardFlightAnimations: React.FC = () => {
   };
 
   if (flyingCards.length === 0) return null;
+
+  if (!cardAnimations) return null;
 
   return (
     <group>

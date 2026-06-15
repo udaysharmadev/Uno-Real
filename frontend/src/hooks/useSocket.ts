@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { useGameStore } from '../store/useGameStore';
 import { CardColor, CardItem } from '../lib/cards/cardEngine';
 import { soundManager } from '../utils/soundManager';
+import { useSettingsStore } from '../store/useSettingsStore';
 import { getSeatCoords } from '../utils/seating';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
@@ -307,6 +308,11 @@ export const useSocket = () => {
       });
       useGameStore.setState({ isProcessing: true });
       socket.emit('play-card', { cardId, playerId: state.player?.id });
+      
+      const { autoDeclareUno } = useSettingsStore.getState();
+      if (autoDeclareUno && state.player?.cards.length === 2) {
+        socket.emit('call-uno');
+      }
     }
   };
 

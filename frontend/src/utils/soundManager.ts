@@ -3,6 +3,7 @@
  * Uses the Web Audio API to fetch, decode, and play high-quality audio files.
  * Designed for a premium, immersive tabletop experience.
  */
+import { useSettingsStore } from '../store/useSettingsStore';
 
 export type SoundEvent = 
   | 'card_play'
@@ -125,7 +126,11 @@ class SoundManager {
     
     // Default volumes for specific sounds to prevent them from being too loud
     let baseVolume = 0.5;
-    gainNode.gain.value = baseVolume * volumeScale;
+    const { gameVolume, masterVolume } = useSettingsStore.getState();
+    const gVol = gameVolume / 100;
+    const mVol = masterVolume / 100;
+    
+    gainNode.gain.value = baseVolume * volumeScale * gVol * mVol;
     
     source.connect(gainNode);
     gainNode.connect(this.ctx.destination);

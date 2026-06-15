@@ -4,6 +4,7 @@ import React, { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 export interface RoomEnvironmentProps {
   numPlayers: number;
@@ -37,7 +38,7 @@ function CameraSetup({ isLandingPage }: { isLandingPage?: boolean }) {
     const perspCam = camera as THREE.PerspectiveCamera;
     perspCam.fov = 75;
     perspCam.updateProjectionMatrix();
-  }, [camera]);
+  }, [camera, isLandingPage]);
 
   return null;
 }
@@ -492,6 +493,8 @@ function RoomProps() {
 }
 
 function Scene({ numPlayers, localIndex, isLandingPage, children }: RoomEnvironmentProps) {
+  const { cameraMotion, cameraSensitivity, shadowQuality, performanceMode } = useSettingsStore();
+
   return (
     <>
       <CameraSetup isLandingPage={isLandingPage} />
@@ -506,6 +509,10 @@ function Scene({ numPlayers, localIndex, isLandingPage, children }: RoomEnvironm
         maxDistance={4.0}
         enableDamping={true}
         dampingFactor={0.03}
+        enableRotate={cameraMotion}
+        enablePan={cameraMotion}
+        enableZoom={cameraMotion}
+        rotateSpeed={cameraSensitivity / 50}
       />
       <fog attach="fog" args={['#080402', 15, 50]} />
       
@@ -513,7 +520,14 @@ function Scene({ numPlayers, localIndex, isLandingPage, children }: RoomEnvironm
       <hemisphereLight args={['#18120c', '#080402', 0.8]} />
 
       {/* Under-table bounce light for table legs */}
-      <pointLight position={[0, 0.4, 0]} intensity={30} color="#ffaa55" distance={5} decay={2} castShadow />
+      <pointLight 
+        position={[0, 0.4, 0]} 
+        intensity={performanceMode ? 15 : 30} 
+        color="#ffaa55" 
+        distance={5} 
+        decay={2} 
+        castShadow={!performanceMode && shadowQuality !== 'low'} 
+      />
 
       <Floor />
       <GameTable />
@@ -525,13 +539,16 @@ function Scene({ numPlayers, localIndex, isLandingPage, children }: RoomEnvironm
 }
 
 export const RoomEnvironment: React.FC<RoomEnvironmentProps> = ({ numPlayers, localIndex, isLandingPage, children }) => {
+  const { performanceMode, shadowQuality, postProcessing } = useSettingsStore();
+  const enableShadows = !performanceMode && shadowQuality !== 'low';
+
   return (
     <Canvas
-      shadows
+      shadows={enableShadows}
       camera={{ fov: 60, near: 0.1, far: 100 }}
       gl={{
-        antialias: true,
-        toneMapping: THREE.ACESFilmicToneMapping,
+        antialias: postProcessing,
+        toneMapping: postProcessing ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping,
         toneMappingExposure: 0.9,
       }}
       style={{ background: '#020101', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}

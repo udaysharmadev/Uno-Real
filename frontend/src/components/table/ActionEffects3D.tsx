@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useGameStore } from '../../store/useGameStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { AnimatePresence, motion } from 'framer-motion';
 
 /**
@@ -147,6 +148,10 @@ export const ActionEffects3D: React.FC = () => {
   const removeEffect = (id: string) => {
     setEffects(prev => prev.filter(e => e.id !== id));
   };
+
+  const { vfxQuality, performanceMode } = useSettingsStore();
+
+  if (vfxQuality === 'low' || performanceMode) return null;
 
   return (
     <group>
