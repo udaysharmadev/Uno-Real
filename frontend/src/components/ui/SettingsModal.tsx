@@ -138,16 +138,16 @@ export const SettingsModal: React.FC = () => {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="w-full max-w-4xl bg-slate-950/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-4xl bg-gradient-to-b from-neutral-900/97 to-black/97 backdrop-blur-xl panel-arcade overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/50 bg-slate-900/40">
-          <h2 className="text-lg font-black uppercase tracking-widest text-white flex items-center gap-2">
-            <Settings size={20} className="text-slate-400" /> Settings
+        <div className="flex items-center justify-between px-6 py-4 border-b-2 border-white/15 bg-red-600/20">
+          <h2 className="font-arcade text-xl uppercase tracking-wide text-yellow-400 arcade-stroke-uno-sm flex items-center gap-2">
+            <Settings size={20} className="text-white" /> Settings
           </h2>
-          <button 
+          <button
             onClick={() => setIsSettingsOpen(false)}
-            className="p-2 text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 rounded-full transition-colors"
+            className="chip-arcade w-9 h-9 flex items-center justify-center text-white bg-gradient-to-b from-rose-500 to-red-700"
           >
             <X size={16} />
           </button>
@@ -164,9 +164,9 @@ export const SettingsModal: React.FC = () => {
                   <Volume2 size={12} /> Audio
                 </h3>
                 <div className="space-y-5">
-                  <SliderField icon={Volume2} label="Master Volume" value={masterVolume} setter={setMasterVolume} color="indigo" />
+                  <SliderField icon={Volume2} label="Master Volume" value={masterVolume} setter={setMasterVolume} color="blue" />
                   <SliderField icon={Gamepad2} label="Game Sounds" value={gameVolume} setter={setGameVolume} color="blue" />
-                  <SliderField icon={Monitor} label="Ambient Volume" value={ambientVolume} setter={setAmbientVolume} color="cyan" />
+                  <SliderField icon={Monitor} label="Ambient Volume" value={ambientVolume} setter={setAmbientVolume} color="green" />
                   <SliderField icon={Mic} label="Microphone Level" value={micVolume} setter={setMicVolume} color="rose" />
                   <SliderField icon={Headphones} label="Voice Chat" value={voiceVolume} setter={setVoiceVolume} color="emerald" />
                 </div>
@@ -232,7 +232,7 @@ export const SettingsModal: React.FC = () => {
               onClick={() => { setIsControlsOpen(true); setIsSettingsOpen(false); }}
               className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-slate-900/40 hover:bg-slate-800/60 border border-slate-800 transition-colors text-slate-400 hover:text-white group"
             >
-              <Keyboard size={18} className="group-hover:scale-110 transition-transform text-cyan-400" />
+              <Keyboard size={18} className="group-hover:scale-110 transition-transform text-blue-400" />
               <span className="text-[9px] font-bold uppercase tracking-wider">Controls</span>
             </button>
             <button 

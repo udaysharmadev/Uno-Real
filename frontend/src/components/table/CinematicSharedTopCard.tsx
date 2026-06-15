@@ -9,6 +9,7 @@ import { PhysicalCard } from '../cards/PhysicalCard';
 
 export const CinematicSharedTopCard: React.FC = () => {
   const discardPile = useGameStore((state) => state.discardPile);
+  const wildColor = useGameStore((state) => state.wildColor);
   const topCard = discardPile && discardPile.length > 0 ? discardPile[discardPile.length - 1] : null;
 
   const [activeCard, setActiveCard] = useState<any | null>(topCard);
@@ -79,10 +80,14 @@ export const CinematicSharedTopCard: React.FC = () => {
 
   if (!activeCard) return null;
 
+  // Once a player picks a color for a Wild / Wild +4, the top card adopts that color.
+  const displayColor =
+    activeCard.color === 'wild' && wildColor ? wildColor : activeCard.color;
+
   return (
     <group ref={groupRef}>
       <PhysicalCard
-        color={activeCard.color as any}
+        color={displayColor as any}
         value={activeCard.value}
         isFaceUp={true}
         position={[0, 0, 0]}

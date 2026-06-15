@@ -17,13 +17,13 @@ const ModalBase = ({ isOpen, onClose, title, icon: Icon, children }: any) => {
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-slate-950/95 backdrop-blur-xl border border-slate-800/80 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-lg bg-gradient-to-b from-neutral-900/97 to-black/97 backdrop-blur-xl panel-arcade overflow-hidden flex flex-col"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/50 bg-slate-900/40">
-          <h2 className="text-lg font-black uppercase tracking-widest text-white flex items-center gap-2">
-            <Icon size={20} className="text-slate-400" /> {title}
+        <div className="flex items-center justify-between px-6 py-4 border-b-2 border-white/15 bg-red-600/20">
+          <h2 className="font-arcade text-xl uppercase tracking-wide text-yellow-400 arcade-stroke-uno-sm flex items-center gap-2">
+            <Icon size={20} className="text-white" /> {title}
           </h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 rounded-full transition-colors">
+          <button onClick={onClose} className="chip-arcade w-9 h-9 flex items-center justify-center text-white bg-gradient-to-b from-rose-500 to-red-700">
             <X size={16} />
           </button>
         </div>
@@ -120,7 +120,7 @@ export const AboutModal = () => {
   return (
     <ModalBase isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} title="About" icon={Info}>
       <div className="flex flex-col items-center justify-center gap-4 text-center py-4">
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(59,130,246,0.3)] border border-white/10 mb-2">
+        <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-700 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(220,38,38,0.4)] border border-white/10 mb-2">
           <span className="text-3xl font-black text-white">🂠</span>
         </div>
         <h3 className="text-xl font-black uppercase tracking-widest text-white">UNO Real</h3>

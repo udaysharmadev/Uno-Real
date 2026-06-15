@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Lilita_One, Fredoka } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -9,6 +9,20 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+// Arcade display font (chunky, Smash Karts vibe)
+const lilitaOne = Lilita_One({
+  variable: "--font-arcade",
+  weight: "400",
+  subsets: ["latin"],
+});
+
+// Rounded UI font for body/buttons
+const fredoka = Fredoka({
+  variable: "--font-rounded",
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
 });
 
@@ -27,7 +41,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} ${lilitaOne.variable} ${fredoka.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-50 bg-grid-pattern antialiased">
         {children}

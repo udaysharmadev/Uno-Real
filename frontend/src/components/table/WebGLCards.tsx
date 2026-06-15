@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 
 export const WebGLCards: React.FC = () => {
-  const { room, player, currentPlayerId, playerCards, discardPile, drawPileCount, gameStatus, isProcessing } = useGameStore();
+  const { room, player, currentPlayerId, playerCards, discardPile, drawPileCount, gameStatus, isProcessing, wildColor } = useGameStore();
   const { playCard, drawCard } = useSocket();
 
   const isMyTurn = currentPlayerId === player?.id && (gameStatus === 'playing' || gameStatus === 'awaiting_color_selection') && !isProcessing;
@@ -40,10 +40,14 @@ export const WebGLCards: React.FC = () => {
           const zOffset = (randRot - 0.5) * 0.08;
           const yRot = (randRot - 0.5) * 0.3;
 
+          // Top wild / +4 card adopts the chosen color once selected.
+          const displayColor =
+            isTop && card.color === 'wild' && wildColor ? wildColor : card.color;
+
           return (
             <PhysicalCard
               key={card.id}
-              color={card.color}
+              color={displayColor}
               value={card.value}
               isFaceUp={true}
               position={[xOffset, actualIdx * 0.002, zOffset]}

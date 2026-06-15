@@ -33,9 +33,9 @@ import { useSettingsStore } from '../../../store/useSettingsStore';
 // Premium Loader Component for elegant loading states
 const PremiumLoader: React.FC<{ message: string; submessage?: string }> = ({ message, submessage }) => {
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950 text-slate-100 gap-6 z-[999] overflow-hidden select-none">
+    <div className="fixed inset-0 flex flex-col items-center justify-center arcade-bg arcade-dots text-slate-100 gap-6 z-[999] overflow-hidden select-none">
       {/* Pulsing neon backing glow */}
-      <div className="absolute w-[350px] h-[350px] bg-blue-500/10 rounded-full blur-[80px] animate-pulse pointer-events-none" />
+      <div className="absolute w-[350px] h-[350px] bg-red-500/20 rounded-full blur-[80px] animate-pulse pointer-events-none" />
       
       {/* Animated Cards Graphic */}
       <div className="relative w-20 h-28 flex items-center justify-center">
@@ -56,7 +56,7 @@ const PremiumLoader: React.FC<{ message: string; submessage?: string }> = ({ mes
         <motion.div
           animate={{ scale: [1, 1.05, 1] }}
           transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
-          className="absolute w-14 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 border border-white/20 rounded-xl shadow-2xl flex items-center justify-center z-10"
+          className="absolute w-14 h-20 bg-gradient-to-br from-red-600 to-red-700 border border-white/20 rounded-xl shadow-2xl flex items-center justify-center z-10"
         >
           <span className="text-white text-xl font-black">🏆</span>
         </motion.div>
@@ -64,11 +64,11 @@ const PremiumLoader: React.FC<{ message: string; submessage?: string }> = ({ mes
       
       {/* Message and Submessage */}
       <div className="text-center space-y-2 relative z-10">
-        <h2 className="text-lg font-black text-white uppercase tracking-widest animate-pulse">
+        <h2 className="font-arcade text-xl text-white uppercase tracking-wide arcade-stroke-sm animate-pulse">
           {message}
         </h2>
         {submessage && (
-          <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+          <p className="font-rounded text-yellow-200 text-xs font-bold uppercase tracking-wider">
             {submessage}
           </p>
         )}
@@ -315,21 +315,21 @@ export default function LobbyPage() {
   // Render connection/error loading states
   if (!room || (!player && !isSpectator)) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-4 min-h-screen bg-slate-950">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 min-h-screen arcade-bg arcade-dots">
         <div className="text-center max-w-sm flex flex-col items-center gap-4">
           {error ? (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="glass-panel border-red-500/30 p-6 rounded-2xl flex flex-col items-center gap-4 shadow-2xl"
+              className="panel-arcade bg-gradient-to-b from-rose-600 to-red-800 p-6 flex flex-col items-center gap-4"
             >
-              <ShieldAlert className="text-red-500 animate-bounce" size={48} />
-              <h2 className="text-xl font-bold text-white">Join Failed</h2>
-              <p className="text-slate-400 text-sm leading-relaxed font-medium">
+              <ShieldAlert className="text-yellow-300 animate-bounce" size={48} />
+              <h2 className="font-arcade text-2xl uppercase tracking-wide text-white arcade-stroke-sm">Join Failed</h2>
+              <p className="font-rounded text-white/90 text-sm leading-relaxed font-semibold">
                 {error === 'Room not found' ? 'This room no longer exists' : error}
               </p>
               {(error === 'Room not found' || error === 'This room no longer exists') && (
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider animate-pulse">
+                <p className="font-rounded text-[11px] text-yellow-200 font-bold uppercase tracking-wider animate-pulse">
                   Redirecting to home page shortly...
                 </p>
               )}
@@ -338,7 +338,7 @@ export default function LobbyPage() {
                   setError(null);
                   router.push('/');
                 }}
-                className="w-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all"
+                className="btn-arcade w-full bg-gradient-to-b from-blue-400 to-blue-600 text-white py-3 px-4 text-sm uppercase"
               >
                 Return Home
               </button>
@@ -381,25 +381,25 @@ export default function LobbyPage() {
               initial={{ opacity: 0, y: -20, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.9, transition: { duration: 0.2 } }}
-              className={`pointer-events-auto flex items-center justify-between p-3.5 rounded-2xl shadow-2xl border backdrop-blur-md ${
+              className={`pointer-events-auto flex items-center justify-between p-3.5 rounded-2xl shadow-[0_5px_0_0_rgba(0,0,0,0.3)] border-[3px] ${
                 toast.type === 'error'
-                  ? 'bg-red-950/85 border-red-500/30 text-red-200 shadow-red-500/10'
+                  ? 'bg-gradient-to-b from-rose-500 to-red-700 border-white text-white'
                   : toast.type === 'success'
-                    ? 'bg-emerald-950/85 border-emerald-500/30 text-emerald-200 shadow-emerald-500/10'
-                    : 'bg-slate-900/90 border-slate-800 text-slate-200'
+                    ? 'bg-gradient-to-b from-lime-400 to-green-600 border-white text-white'
+                    : 'bg-gradient-to-b from-blue-500 to-blue-700 border-white text-white'
               }`}
             >
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold leading-tight select-none">
                   {toast.type === 'error' ? '🚨' : toast.type === 'success' ? '✅' : 'ℹ️'}
                 </span>
-                <span className="text-[10px] font-bold tracking-wide leading-tight">
+                <span className="font-rounded text-[11px] font-bold tracking-wide leading-tight">
                   {toast.message}
                 </span>
               </div>
               <button
                 onClick={() => removeToast(toast.id)}
-                className="text-slate-400 hover:text-white transition-colors text-[9px] font-black uppercase ml-4"
+                className="text-white/70 hover:text-white transition-colors text-[10px] font-black uppercase ml-4"
               >
                 ✕
               </button>
@@ -436,88 +436,78 @@ export default function LobbyPage() {
           {/* Top Left: Compact Lobby Panel */}
           {room && (
             <div className="pointer-events-auto">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              <button
                 onClick={() => {
                   handleCopyCode();
                   addToast('Copied to clipboard', 'success');
                 }}
-                className="group flex items-center gap-2.5 bg-slate-900/60 hover:bg-slate-800/80 backdrop-blur-md border border-slate-700/50 rounded-xl px-4 py-2 shadow-lg transition-all"
+                className="group chip-arcade flex items-center gap-2.5 bg-gradient-to-b from-neutral-800 to-black px-4 py-2"
                 title="Copy Room Code"
               >
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                  Lobby:
+                <span className="font-arcade text-xs text-yellow-300 uppercase tracking-widest">
+                  Lobby
                 </span>
-                <span className="text-sm font-black text-white tracking-wider font-mono">
+                <span className="font-arcade text-base text-white tracking-wider">
                   {room.code}
                 </span>
-                <div className="text-slate-400 group-hover:text-white transition-colors ml-1">
-                  {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                <div className="text-white/80 group-hover:text-white transition-colors ml-1">
+                  {copied ? <Check size={14} className="text-lime-300" /> : <Copy size={14} />}
                 </div>
-              </motion.button>
+              </button>
             </div>
           )}
 
           {/* Top Right: Essential Actions */}
           <div className="flex gap-3 items-center pointer-events-auto">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => {
                 toggleMic();
               }}
-              className={`backdrop-blur-md border rounded-xl w-10 h-10 flex items-center justify-center transition-all shadow-lg ${
-                isMicEnabled 
-                  ? 'bg-green-950/60 border-green-500/50 text-green-400 hover:text-green-300' 
-                  : 'bg-red-950/60 border-red-900/50 text-red-500 hover:text-red-400'
+              className={`chip-arcade w-11 h-11 flex items-center justify-center text-white ${
+                isMicEnabled
+                  ? 'bg-gradient-to-b from-lime-400 to-green-600'
+                  : 'bg-gradient-to-b from-rose-500 to-red-700'
               }`}
               title={isMicEnabled ? 'Mute Microphone' : 'Enable Microphone'}
             >
               {isMicEnabled ? <Mic size={16} /> : <MicOff size={16} />}
-            </motion.button>
+            </button>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => {
                 setSpeakerEnabled(!isSpeakerEnabled);
                 addToast(!isSpeakerEnabled ? 'Voice Chat Enabled' : 'Voice Chat Muted', 'info');
               }}
-              className={`backdrop-blur-md border rounded-xl w-10 h-10 flex items-center justify-center transition-all shadow-lg ${
-                isSpeakerEnabled 
-                  ? 'bg-slate-900/60 border-slate-700/50 text-slate-300 hover:text-white' 
-                  : 'bg-red-950/60 border-red-900/50 text-red-500 hover:text-red-400'
+              className={`chip-arcade w-11 h-11 flex items-center justify-center text-white ${
+                isSpeakerEnabled
+                  ? 'bg-gradient-to-b from-blue-400 to-blue-600'
+                  : 'bg-gradient-to-b from-rose-500 to-red-700'
               }`}
               title={isSpeakerEnabled ? 'Mute Voice Chat' : 'Enable Voice Chat'}
             >
               <Headphones size={16} />
-            </motion.button>
+            </button>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => {
                 setIsSettingsOpen(true);
               }}
-              className="bg-slate-900/60 hover:bg-slate-800/80 backdrop-blur-md border border-slate-700/50 rounded-xl w-10 h-10 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-lg"
+              className="chip-arcade w-11 h-11 flex items-center justify-center text-white bg-gradient-to-b from-neutral-700 to-neutral-900"
               title="Settings"
             >
-              <Settings size={16} className="text-slate-300" />
-            </motion.button>
+              <Settings size={16} className="text-white" />
+            </button>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => {
                 leaveRoom();
                 router.push('/');
               }}
-              className="bg-slate-900/60 hover:bg-red-950/40 backdrop-blur-md border border-slate-700/50 hover:border-red-500/30 rounded-xl w-10 h-10 flex items-center justify-center text-slate-300 hover:text-red-400 transition-all shadow-lg"
+              className="chip-arcade w-11 h-11 flex items-center justify-center text-white bg-gradient-to-b from-rose-500 to-red-700"
               title="Exit Table"
             >
               <LogOut size={16} />
-            </motion.button>
+            </button>
           </div>
         </header>
 
@@ -529,41 +519,39 @@ export default function LobbyPage() {
               {gameStatus === 'lobby' ? (
                 isHost ? (
                   <div className="flex flex-col items-center gap-1.5">
-                    <motion.button
-                      whileHover={!canStart || isProcessing || isSpectator ? {} : { scale: 1.05 }}
-                      whileTap={!canStart || isProcessing || isSpectator ? {} : { scale: 0.95 }}
+                    <button
                       disabled={!canStart || isProcessing || isSpectator}
                       onClick={() => {
                         setIsProcessing(true);
                         startGame();
                       }}
-                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:opacity-40 text-white font-bold py-2 px-5 rounded-full shadow-md transition-all flex items-center gap-1 text-[10px] uppercase tracking-wider border border-emerald-400/20 disabled:border-transparent disabled:text-slate-500"
+                      className="btn-arcade bg-gradient-to-b from-lime-400 to-green-600 text-white py-2.5 px-7 text-sm uppercase disabled:cursor-not-allowed"
                     >
-                      Start Game
-                    </motion.button>
+                      ▶ Start Game
+                    </button>
                     {!canStart && (
-                      <span className="text-[8px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-2 py-0.5 rounded-full shadow-md">
+                      <span className="font-rounded font-bold text-[10px] bg-black/85 border-2 border-white/30 text-yellow-300 px-3 py-1 rounded-full shadow-md">
                         Waiting for players to sit ({totalPlayers}/2 minimum)
                       </span>
                     )}
                   </div>
                 ) : (
-                  <span className="text-[8px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3 py-1 rounded-full shadow-md">
+                  <span className="font-rounded font-bold text-[10px] bg-black/85 border-2 border-white/30 text-yellow-300 px-3 py-1 rounded-full shadow-md">
                     Waiting for host...
                   </span>
                 )
               ) : gameStatus === 'playing' ? (
                 isMyTurn ? (
-                  <span className="text-[9px] bg-emerald-950/40 backdrop-blur-sm border border-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.1)] font-bold uppercase tracking-wider animate-pulse">
-                    Your Turn
+                  <span className="font-arcade text-xs bg-gradient-to-b from-lime-400 to-green-600 border-[3px] border-white text-white px-4 py-1.5 rounded-full shadow-[0_4px_0_0_rgba(0,0,0,0.3)] uppercase tracking-wide animate-pulse">
+                    ⭐ Your Turn!
                   </span>
                 ) : (
-                  <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3 py-1 rounded-full shadow-md">
+                  <span className="font-rounded font-bold text-[10px] bg-black/85 border-2 border-white/30 text-blue-300 px-3 py-1 rounded-full shadow-md">
                     Waiting for Seat {currentPlayerSeat}...
                   </span>
                 )
               ) : gameStatus === 'awaiting_color_selection' ? (
-                <span className="text-[9px] bg-slate-950/80 border border-slate-900/60 text-slate-400 px-3.5 py-1.5 rounded-full shadow-md">
+                <span className="font-rounded font-bold text-[10px] bg-black/85 border-2 border-white/30 text-yellow-300 px-3.5 py-1.5 rounded-full shadow-md">
                   Waiting for color selection...
                 </span>
               ) : null}
@@ -572,18 +560,17 @@ export default function LobbyPage() {
               {(myHand.length === 2 || myHand.length === 1) && gameStatus === 'playing' && !isSpectator && !(player && unoCalled[player.id]) && (
                 <motion.button
                   disabled={isProcessing}
-                  whileHover={{ scale: myHand.length === 1 ? 1.12 : 1.08 }}
-                  whileTap={{ scale: 0.92, y: 2 }}
+                  whileTap={{ scale: 0.92, y: 4 }}
                   animate={myHand.length === 1 ? { scale: [1, 1.08, 1] } : {}}
                   transition={myHand.length === 1 ? { repeat: Infinity, duration: 0.8, ease: 'easeInOut' } : undefined}
                   onClick={() => {
                     setIsProcessing(true);
                     callUno();
                   }}
-                  className={`mt-2 rounded-full font-black uppercase tracking-wider transition-all duration-300 border ${
+                  className={`btn-arcade mt-2 text-white uppercase ${
                     myHand.length === 1
-                      ? 'px-6 py-2.5 text-sm bg-gradient-to-r from-red-700 to-orange-600 border-red-400 text-white shadow-[0_0_25px_rgba(239,68,68,0.7)] hover:shadow-[0_0_40px_rgba(239,68,68,0.9)]'
-                      : 'px-3.5 py-1.5 text-[9px] bg-slate-900 border-slate-700 hover:border-red-500 hover:text-red-400 text-slate-300 shadow-md shadow-red-500/10'
+                      ? 'px-7 py-3 text-lg bg-gradient-to-b from-red-500 to-orange-600'
+                      : 'px-4 py-2 text-[11px] bg-gradient-to-b from-red-500 to-red-700'
                   }`}
                 >
                   {myHand.length === 1 ? '🚨 PRESS UNO!' : '📣 Declare UNO!'}
@@ -596,8 +583,7 @@ export default function LobbyPage() {
                 .map(targetPlayer => (
                   <motion.button
                     key={`catch-${targetPlayer.id}`}
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.92 }}
+                    whileTap={{ scale: 0.92, y: 4 }}
                     animate={{ scale: [1, 1.06, 1] }}
                     transition={{ repeat: Infinity, duration: 1, ease: 'easeInOut' }}
                     disabled={isProcessing}
@@ -606,7 +592,7 @@ export default function LobbyPage() {
                       catchUno(targetPlayer.id);
                       addToast(`Caught ${targetPlayer.name} not calling UNO! +2 penalty cards`, 'success');
                     }}
-                    className="mt-1.5 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-600 to-orange-600 border border-amber-400/50 text-white shadow-[0_0_15px_rgba(245,158,11,0.5)] hover:shadow-[0_0_25px_rgba(245,158,11,0.7)] transition-all"
+                    className="btn-arcade mt-1.5 px-5 py-2 text-[11px] bg-gradient-to-b from-amber-400 to-orange-600 text-white uppercase"
                   >
                     🚨 Catch {targetPlayer.name}&apos;s UNO!
                   </motion.button>
@@ -623,60 +609,52 @@ export default function LobbyPage() {
       {/* =================================================================== */}
       {gameStatus === 'awaiting_color_selection' && player && colorChooserId === player.id && (
         <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-slate-900/95 border border-slate-700 p-6 rounded-3xl flex flex-col items-center gap-6 shadow-2xl max-w-sm text-center pointer-events-auto backdrop-blur-md">
+          <div className="panel-arcade bg-gradient-to-b from-neutral-900 to-black p-6 flex flex-col items-center gap-6 max-w-sm text-center pointer-events-auto">
             <div>
-              <h3 className="text-lg font-black uppercase tracking-widest text-white">Choose Color</h3>
-              <p className="text-slate-400 text-xs mt-1">Select the active color for the Wild card</p>
+              <h3 className="font-arcade text-2xl uppercase tracking-wide text-yellow-400 arcade-stroke-uno-sm">Choose Color</h3>
+              <p className="font-rounded font-semibold text-white/80 text-xs mt-1">Pick the active color for the Wild card</p>
             </div>
             <div className="grid grid-cols-2 gap-4 w-full">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <button
                 disabled={isProcessing}
                 onClick={() => {
                   setIsProcessing(true);
                   chooseColor('red');
                 }}
-                className="bg-red-500 hover:bg-red-400 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-red-500/25 transition-all text-sm uppercase tracking-wide border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-arcade bg-gradient-to-b from-red-400 to-red-600 text-white py-5 text-base uppercase disabled:cursor-not-allowed"
               >
                 Red
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              </button>
+              <button
                 disabled={isProcessing}
                 onClick={() => {
                   setIsProcessing(true);
                   chooseColor('blue');
                 }}
-                className="bg-blue-500 hover:bg-blue-400 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-blue-500/25 transition-all text-sm uppercase tracking-wide border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-arcade bg-gradient-to-b from-blue-400 to-blue-600 text-white py-5 text-base uppercase disabled:cursor-not-allowed"
               >
                 Blue
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              </button>
+              <button
                 disabled={isProcessing}
                 onClick={() => {
                   setIsProcessing(true);
                   chooseColor('green');
                 }}
-                className="bg-green-500 hover:bg-green-400 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-green-500/25 transition-all text-sm uppercase tracking-wide border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-arcade bg-gradient-to-b from-lime-400 to-green-600 text-white py-5 text-base uppercase disabled:cursor-not-allowed"
               >
                 Green
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              </button>
+              <button
                 disabled={isProcessing}
                 onClick={() => {
                   setIsProcessing(true);
                   chooseColor('yellow');
                 }}
-                className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold py-4 rounded-2xl shadow-lg hover:shadow-yellow-500/25 transition-all text-sm uppercase tracking-wide border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-arcade bg-gradient-to-b from-yellow-300 to-amber-500 text-neutral-900 py-5 text-base uppercase disabled:cursor-not-allowed"
               >
                 Yellow
-              </motion.button>
+              </button>
             </div>
           </div>
         </div>
@@ -690,40 +668,40 @@ export default function LobbyPage() {
           {/* Confetti canvas animation */}
           <ConfettiCanvas />
 
-          <div className="bg-slate-900 border border-amber-500/30 p-7 rounded-3xl flex flex-col items-center gap-5 shadow-[0_0_50px_rgba(245,158,11,0.25)] max-w-sm w-full text-center z-20 relative">
-            <div className="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-2xl font-extrabold animate-bounce">
+          <div className="panel-arcade bg-gradient-to-b from-neutral-900 to-black p-7 flex flex-col items-center gap-5 max-w-sm w-full text-center z-20 relative">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-b from-yellow-300 to-amber-500 border-4 border-white flex items-center justify-center text-3xl shadow-[0_4px_0_0_rgba(0,0,0,0.3)] animate-bounce">
               🏆
             </div>
             <div>
-              <h2 className="text-xl font-black uppercase tracking-widest text-amber-400 animate-pulse">Victory Match!</h2>
-              <p className="text-slate-200 text-md font-bold mt-1">
+              <h2 className="font-arcade text-3xl uppercase tracking-wide text-yellow-400 arcade-stroke-uno-sm animate-pulse">Victory!</h2>
+              <p className="font-rounded font-bold text-white text-md mt-1">
                 {player && winnerName === player.name ? '🎉 YOU WON THE GAME!' : `🎉 ${winnerName} won the game!`}
               </p>
             </div>
 
             {/* Standings Leaderboard List */}
-            <div className="w-full border-t border-b border-slate-800 py-3 my-0.5 space-y-2 max-h-48 overflow-y-auto">
-              <span className="text-[8px] font-black uppercase tracking-widest text-slate-500 block text-left mb-1">Final Standings</span>
+            <div className="w-full border-t-2 border-b-2 border-white/20 py-3 my-0.5 space-y-2 max-h-48 overflow-y-auto">
+              <span className="font-arcade text-[10px] uppercase tracking-widest text-yellow-200 block text-left mb-1">Final Standings</span>
               {standings.map((entry, idx) => {
                 const rank = idx + 1;
                 const isWinner = rank === 1;
                 const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
                 return (
-                  <div 
+                  <div
                     key={entry.id}
-                    className={`flex justify-between items-center px-3 py-1.5 rounded-xl border ${
-                      isWinner 
-                        ? 'bg-amber-950/40 border-amber-500/30 text-amber-200' 
-                        : entry.id === player?.id 
-                          ? 'bg-blue-950/40 border-blue-500/20 text-blue-200'
-                          : 'bg-slate-950/60 border-slate-900 text-slate-300'
+                    className={`flex justify-between items-center px-3 py-1.5 rounded-xl border-2 ${
+                      isWinner
+                        ? 'bg-amber-400/20 border-yellow-300/60 text-yellow-100'
+                        : entry.id === player?.id
+                          ? 'bg-blue-500/20 border-blue-400/50 text-blue-100'
+                          : 'bg-white/5 border-white/15 text-white/80'
                     }`}
                   >
-                    <div className="flex items-center gap-2 text-[10px]">
-                      <span className="font-bold">{medal} #{rank}</span>
-                      <span className="font-black truncate max-w-[100px]">{entry.name}</span>
+                    <div className="flex items-center gap-2 text-[11px] font-rounded font-bold">
+                      <span>{medal} #{rank}</span>
+                      <span className="font-arcade truncate max-w-[100px]">{entry.name}</span>
                     </div>
-                    <span className="text-[9px] font-bold text-slate-400">
+                    <span className="text-[10px] font-rounded font-semibold text-white/60">
                       {entry.cardCount === 0 ? 'Won' : `${entry.cardCount} cards left`}
                     </span>
                   </div>
@@ -734,35 +712,31 @@ export default function LobbyPage() {
             {/* Play Again Loop Buttons */}
             <div className="w-full space-y-2">
               {isHost ? (
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
+                <button
                   disabled={isProcessing}
                   onClick={() => {
                     setIsProcessing(true);
                     startGame();
                   }}
-                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-2.5 px-6 rounded-2xl shadow-lg transition-all text-xs uppercase tracking-wider border border-emerald-400/20 disabled:opacity-40"
+                  className="btn-arcade w-full bg-gradient-to-b from-lime-400 to-green-600 text-white py-3 px-6 text-sm uppercase disabled:cursor-not-allowed"
                 >
-                  🔄 Play Again (Host)
-                </motion.button>
+                  🔄 Play Again
+                </button>
               ) : (
-                <div className="w-full py-2.5 px-4 rounded-xl bg-slate-950/60 border border-slate-900 text-center animate-pulse text-[8px] font-black uppercase tracking-widest text-slate-500">
+                <div className="w-full py-2.5 px-4 rounded-full bg-white/5 border-2 border-white/15 text-center animate-pulse font-rounded font-bold text-[10px] uppercase tracking-widest text-yellow-200">
                   ⏳ Waiting for host to restart...
                 </div>
               )}
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              <button
                 onClick={() => {
                   leaveRoom();
                   router.push('/');
                 }}
-                className="w-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-bold py-2.5 px-4 rounded-2xl text-[10px] uppercase tracking-wide transition-all"
+                className="btn-arcade w-full bg-gradient-to-b from-rose-500 to-red-700 text-white py-3 px-4 text-xs uppercase"
               >
-                Exit to Main Menu
-              </motion.button>
+                Exit to Menu
+              </button>
             </div>
           </div>
         </div>
